@@ -1,6 +1,13 @@
-﻿namespace Tempovium.ViewModels;
+﻿using Tempovium.Core.Services;
 
-public partial class MainWindowViewModel : ViewModelBase
+namespace Tempovium.ViewModels;
+
+public class MainWindowViewModel : ViewModelBase
 {
-    public string Greeting { get; } = "Welcome to Avalonia!";
+    public NavigationService NavigationService { get; }
+
+    public MainWindowViewModel(NavigationService navigationService)
+    {
+        NavigationService = navigationService;
+    }
 }

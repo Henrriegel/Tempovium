@@ -1,21 +1,52 @@
-﻿using Avalonia;
-using System;
+﻿using System;
+using Avalonia;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Tempovium.Infrastructure.DependencyInjection;
+using Tempovium.Infrastructure.Persistence;
+using Tempovium.ViewModels;
+using Tempovium.Core.Services;
 
 namespace Tempovium;
 
-sealed class Program
+internal class Program
 {
-    // Initialization code. Don't use any Avalonia, third-party APIs or any
-    // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
-    // yet and stuff might break.
-    [STAThread]
-    public static void Main(string[] args) => BuildAvaloniaApp()
-        .StartWithClassicDesktopLifetime(args);
+    public static IHost AppHost { get; private set; } = null!;
 
-    // Avalonia configuration, don't remove; also used by visual designer.
+    [STAThread]
+    public static void Main(string[] args)
+    {
+        AppHost = Host.CreateDefaultBuilder(args)
+            .ConfigureServices((context, services) =>
+            {
+                services.AddTempoviumInfrastructure();
+                services.AddSingleton<MainWindowViewModel>();
+                services.AddTransient<LoginViewModel>();
+                services.AddTransient<LibraryViewModel>();
+            })
+            .Build();
+
+        using (var scope = AppHost.Services.CreateScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<TempoviumDbContext>();
+            dbContext.Database.Migrate();
+        }
+        
+        using (var scope = AppHost.Services.CreateScope())
+        {
+            var navigationService = scope.ServiceProvider.GetRequiredService<NavigationService>();
+            var loginViewModel = scope.ServiceProvider.GetRequiredService<LoginViewModel>();
+
+            navigationService.CurrentView = loginViewModel;
+        }
+
+        BuildAvaloniaApp()
+            .StartWithClassicDesktopLifetime(args);
+    }
+
     public static AppBuilder BuildAvaloniaApp()
         => AppBuilder.Configure<App>()
             .UsePlatformDetect()
-            .WithInterFont()
             .LogToTrace();
 }

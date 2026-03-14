@@ -1,0 +1,43 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Tempovium.ViewModels"
+             mc:Ignorable="d"
+             x:Class="Tempovium.Views.LoginView"
+             x:DataType="vm:LoginViewModel">
+
+    <StackPanel Margin="24" Spacing="12" Width="300">
+
+        <TextBlock Text="Tempovium"
+                   FontSize="28"
+                   FontWeight="Bold"
+                   HorizontalAlignment="Center"/>
+
+        <TextBlock Text="Iniciar sesión"
+                   FontSize="20"
+                   HorizontalAlignment="Center"/>
+
+        <TextBlock Text="Usuario"/>
+
+        <TextBox Text="{Binding Username}"
+                 Watermark="Escribe tu usuario"/>
+
+        <TextBlock Text="Contraseña"/>
+
+        <TextBox Text="{Binding Password}"
+                 PasswordChar="*"
+                 Watermark="Escribe tu contraseña"/>
+
+        <Button Content="Entrar"
+                Width="120"
+                HorizontalAlignment="Center"
+                Command="{Binding LoginCommand}"/>
+
+        <TextBlock Text="{Binding StatusMessage}"
+                   TextWrapping="Wrap"
+                   HorizontalAlignment="Center"/>
+
+    </StackPanel>
+
+</UserControl>

@@ -1,0 +1,54 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Tempovium.ViewModels"
+             x:Class="Tempovium.Views.LibraryView"
+             x:DataType="vm:LibraryViewModel">
+
+    <DockPanel Margin="20">
+
+        <StackPanel DockPanel.Dock="Top"
+                    Orientation="Horizontal"
+                    Spacing="10"
+                    Margin="0 0 0 10">
+
+            <TextBlock Text="Biblioteca"
+                       FontSize="28"
+                       FontWeight="Bold"/>
+
+            <Button Content="Importar carpeta"
+                    Command="{Binding ImportFolderCommand}"/>
+
+        </StackPanel>
+
+        <ItemsControl ItemsSource="{Binding MediaItems}">
+
+            <ItemsControl.ItemTemplate>
+
+                <DataTemplate>
+
+                    <Border BorderBrush="Gray"
+                            BorderThickness="1"
+                            Padding="10"
+                            Margin="4">
+
+                        <StackPanel>
+
+                            <TextBlock Text="{Binding Title}"
+                                       FontWeight="Bold"/>
+
+                            <TextBlock Text="{Binding FilePath}"
+                                       FontSize="12"/>
+
+                        </StackPanel>
+
+                    </Border>
+
+                </DataTemplate>
+
+            </ItemsControl.ItemTemplate>
+
+        </ItemsControl>
+
+    </DockPanel>
+
+</UserControl>

@@ -4,12 +4,12 @@ using Tempovium.ViewModels;
 
 namespace Tempovium.Views;
 
-public partial class MainWindow : Window
+public partial class LibraryView : UserControl
 {
-    public MainWindow()
+    public LibraryView()
     {
         InitializeComponent();
 
-        DataContext = Program.AppHost.Services.GetRequiredService<MainWindowViewModel>();
+        DataContext = Program.AppHost.Services.GetRequiredService<LibraryViewModel>();
     }
 }

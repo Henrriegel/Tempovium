@@ -1,0 +1,6 @@
+@Tempovium.Api_HostAddress = http://localhost:5226
+
+GET {{Tempovium.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
