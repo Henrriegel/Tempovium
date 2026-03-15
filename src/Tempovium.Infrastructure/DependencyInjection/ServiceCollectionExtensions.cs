@@ -24,6 +24,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<MediaFileValidator>();
         services.AddSingleton<UserSessionService>();
         services.AddSingleton<NavigationService>();
+        services.AddSingleton<SelectedMediaService>();
 
         return services;
     }

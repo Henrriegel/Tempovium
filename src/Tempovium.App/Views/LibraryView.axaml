@@ -4,12 +4,18 @@
              x:Class="Tempovium.Views.LibraryView"
              x:DataType="vm:LibraryViewModel">
 
-    <DockPanel Margin="20">
+    <Grid Margin="20"
+          RowDefinitions="Auto,Auto,*"
+          ColumnDefinitions="2*,3*"
+          ColumnSpacing="16"
+          RowSpacing="12">
 
-        <StackPanel DockPanel.Dock="Top"
+        <!-- Encabezado -->
+        <StackPanel Grid.Row="0"
+                    Grid.Column="0"
+                    Grid.ColumnSpan="2"
                     Orientation="Horizontal"
-                    Spacing="10"
-                    Margin="0 0 0 10">
+                    Spacing="10">
 
             <TextBlock Text="Biblioteca"
                        FontSize="28"
@@ -20,25 +26,24 @@
 
         </StackPanel>
 
-        <StackPanel DockPanel.Dock="Top" Spacing="10" Margin="0 0 0 10">
-            <TextBlock Text="{Binding StatusMessage}"
-                       TextWrapping="Wrap"/>
+        <!-- Mensaje de estado -->
+        <TextBlock Grid.Row="1"
+                   Grid.Column="0"
+                   Grid.ColumnSpan="2"
+                   Text="{Binding StatusMessage}"
+                   TextWrapping="Wrap"/>
 
-            <Border BorderBrush="Gray"
-                    BorderThickness="1"
-                    Padding="12"
-                    Margin="8">
-                <TextBlock Text="Reproductor VLC preparado. Lo moveremos a una vista separada para evitar que tape la UI."
-                           TextWrapping="Wrap"/>
-            </Border>
-        </StackPanel>
+        <!-- Lista izquierda -->
+        <Border Grid.Row="2"
+                Grid.Column="0"
+                BorderBrush="Gray"
+                BorderThickness="1"
+                Padding="8">
 
-        <ScrollViewer VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Auto">
+            <ListBox ItemsSource="{Binding MediaItems}"
+                     SelectedItem="{Binding SelectedMedia, Mode=TwoWay}">
 
-            <ItemsControl ItemsSource="{Binding MediaItems}">
-
-                <ItemsControl.ItemTemplate>
+                <ListBox.ItemTemplate>
                     <DataTemplate>
                         <Border BorderBrush="Gray"
                                 BorderThickness="1"
@@ -56,12 +61,80 @@
 
                         </Border>
                     </DataTemplate>
-                </ItemsControl.ItemTemplate>
+                </ListBox.ItemTemplate>
 
-            </ItemsControl>
+            </ListBox>
 
-        </ScrollViewer>
+        </Border>
 
-    </DockPanel>
+        <!-- Panel derecho -->
+        <Border Grid.Row="2"
+                Grid.Column="1"
+                BorderBrush="Gray"
+                BorderThickness="1"
+                Padding="12">
+
+            <Grid RowDefinitions="Auto,*"
+                  RowSpacing="10">
+
+                <TextBlock Text="Panel de reproducción"
+                           FontSize="20"
+                           FontWeight="Bold"/>
+
+                <Grid Grid.Row="1">
+
+                    <!-- Estado vacío -->
+                    <StackPanel IsVisible="{Binding HasNoSelectedMedia}"
+                                Spacing="10">
+
+                        <TextBlock Text="Selecciona un medio de la biblioteca para comenzar."
+                                   FontSize="14"
+                                   Opacity="0.7"
+                                   TextWrapping="Wrap"/>
+
+                    </StackPanel>
+
+                    <!-- Estado con selección -->
+                    <Grid IsVisible="{Binding HasSelectedMedia}"
+                          RowDefinitions="Auto,Auto,*,Auto"
+                          RowSpacing="10">
+
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="{Binding SelectedMediaTitle}"
+                                       FontWeight="Bold"
+                                       FontSize="16"
+                                       TextWrapping="Wrap"/>
+
+                            <TextBlock Text="{Binding SelectedMediaFolderPath}"
+                                       FontSize="12"
+                                       Opacity="0.8"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <Border Grid.Row="1"
+                                BorderBrush="Gray"
+                                BorderThickness="1"
+                                MinHeight="300"
+                                Padding="12">
+
+                            <TextBlock Text="Aquí irá el reproductor VLC."
+                                       Opacity="0.7"/>
+
+                        </Border>
+
+                        <TextBlock Grid.Row="3"
+                                   Text="Notas del medio aparecerán aquí."
+                                   FontSize="12"
+                                   Opacity="0.6"/>
+
+                    </Grid>
+
+                </Grid>
+
+            </Grid>
+
+        </Border>
+
+    </Grid>
 
 </UserControl>

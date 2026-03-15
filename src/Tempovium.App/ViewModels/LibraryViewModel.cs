@@ -1,13 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Platform.Storage;
 using Tempovium.Core.Entities;
 using Tempovium.Core.Interfaces;
 using Tempovium.Core.Services;
-using Avalonia.Controls;
-using Avalonia.Platform.Storage;
-using Avalonia;
 
 namespace Tempovium.ViewModels;
 
@@ -16,18 +17,22 @@ public class LibraryViewModel : ViewModelBase
     private readonly IMediaRepository _mediaRepository;
     private readonly IMediaImportService _mediaImportService;
     private readonly UserSessionService _userSessionService;
+    private readonly SelectedMediaService _selectedMediaService;
 
     private List<MediaItem> _mediaItems = new();
     private string _statusMessage = string.Empty;
+    private MediaItem? _selectedMedia;
 
     public LibraryViewModel(
         IMediaRepository mediaRepository,
         IMediaImportService mediaImportService,
-        UserSessionService userSessionService)
+        UserSessionService userSessionService,
+        SelectedMediaService selectedMediaService)
     {
         _mediaRepository = mediaRepository;
         _mediaImportService = mediaImportService;
         _userSessionService = userSessionService;
+        _selectedMediaService = selectedMediaService;
 
         ImportFolderCommand = new SimpleCommand(ExecuteImportFolder);
 
@@ -45,6 +50,37 @@ public class LibraryViewModel : ViewModelBase
         get => _statusMessage;
         set => SetProperty(ref _statusMessage, value);
     }
+
+    public MediaItem? SelectedMedia
+    {
+        get => _selectedMedia;
+        set
+        {
+            if (SetProperty(ref _selectedMedia, value))
+            {
+                if (value is not null)
+                {
+                    _selectedMediaService.SelectedMedia = value;
+                }
+
+                OnPropertyChanged(nameof(HasSelectedMedia));
+                OnPropertyChanged(nameof(HasNoSelectedMedia));
+                OnPropertyChanged(nameof(SelectedMediaTitle));
+                OnPropertyChanged(nameof(SelectedMediaFolderPath));
+            }
+        }
+    }
+
+    public bool HasSelectedMedia => SelectedMedia is not null;
+
+    public bool HasNoSelectedMedia => SelectedMedia is null;
+
+    public string SelectedMediaTitle => SelectedMedia?.Title ?? string.Empty;
+
+    public string SelectedMediaFolderPath =>
+        SelectedMedia is null
+            ? string.Empty
+            : Path.GetDirectoryName(SelectedMedia.FilePath) ?? string.Empty;
 
     public ICommand ImportFolderCommand { get; }
 
