@@ -20,34 +20,47 @@
 
         </StackPanel>
 
-        <ItemsControl ItemsSource="{Binding MediaItems}">
+        <StackPanel DockPanel.Dock="Top" Spacing="10" Margin="0 0 0 10">
+            <TextBlock Text="{Binding StatusMessage}"
+                       TextWrapping="Wrap"/>
 
-            <ItemsControl.ItemTemplate>
+            <Border BorderBrush="Gray"
+                    BorderThickness="1"
+                    Padding="12"
+                    Margin="8">
+                <TextBlock Text="Reproductor VLC preparado. Lo moveremos a una vista separada para evitar que tape la UI."
+                           TextWrapping="Wrap"/>
+            </Border>
+        </StackPanel>
 
-                <DataTemplate>
+        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Auto">
 
-                    <Border BorderBrush="Gray"
-                            BorderThickness="1"
-                            Padding="10"
-                            Margin="4">
+            <ItemsControl ItemsSource="{Binding MediaItems}">
 
-                        <StackPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border BorderBrush="Gray"
+                                BorderThickness="1"
+                                Padding="10"
+                                Margin="4">
 
-                            <TextBlock Text="{Binding Title}"
-                                       FontWeight="Bold"/>
+                            <StackPanel>
+                                <TextBlock Text="{Binding Title}"
+                                           FontWeight="Bold"/>
 
-                            <TextBlock Text="{Binding FilePath}"
-                                       FontSize="12"/>
+                                <TextBlock Text="{Binding FilePath}"
+                                           FontSize="12"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
 
-                        </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
 
-                    </Border>
+            </ItemsControl>
 
-                </DataTemplate>
-
-            </ItemsControl.ItemTemplate>
-
-        </ItemsControl>
+        </ScrollViewer>
 
     </DockPanel>
 

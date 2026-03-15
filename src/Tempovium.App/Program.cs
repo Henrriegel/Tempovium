@@ -7,6 +7,7 @@ using Tempovium.Infrastructure.DependencyInjection;
 using Tempovium.Infrastructure.Persistence;
 using Tempovium.ViewModels;
 using Tempovium.Core.Services;
+using LibVLCSharp.Shared;
 
 namespace Tempovium;
 
@@ -17,6 +18,9 @@ internal class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        Environment.SetEnvironmentVariable("VLC_PLUGIN_PATH", "/Applications/VLC.app/Contents/MacOS/plugins");
+        LibVLCSharp.Shared.Core.Initialize("/Applications/VLC.app/Contents/MacOS/lib");
+        
         AppHost = Host.CreateDefaultBuilder(args)
             .ConfigureServices((context, services) =>
             {
