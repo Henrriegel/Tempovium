@@ -9,6 +9,7 @@ using Avalonia.Platform.Storage;
 using Tempovium.Core.Entities;
 using Tempovium.Core.Interfaces;
 using Tempovium.Core.Services;
+using Tempovium.Services;
 
 namespace Tempovium.ViewModels;
 
@@ -18,6 +19,8 @@ public class LibraryViewModel : ViewModelBase
     private readonly IMediaImportService _mediaImportService;
     private readonly UserSessionService _userSessionService;
     private readonly SelectedMediaService _selectedMediaService;
+    private readonly IPlaybackService _playbackService;
+    private readonly FakePlaybackDriverService _fakePlaybackDriver;
 
     private List<MediaItem> _mediaItems = new();
     private string _statusMessage = string.Empty;
@@ -27,12 +30,16 @@ public class LibraryViewModel : ViewModelBase
         IMediaRepository mediaRepository,
         IMediaImportService mediaImportService,
         UserSessionService userSessionService,
-        SelectedMediaService selectedMediaService)
+        SelectedMediaService selectedMediaService,
+        IPlaybackService playbackService,
+        FakePlaybackDriverService fakePlaybackDriver)
     {
         _mediaRepository = mediaRepository;
         _mediaImportService = mediaImportService;
         _userSessionService = userSessionService;
         _selectedMediaService = selectedMediaService;
+        _playbackService = playbackService;
+        _fakePlaybackDriver = fakePlaybackDriver;
 
         ImportFolderCommand = new SimpleCommand(ExecuteImportFolder);
 
@@ -61,6 +68,8 @@ public class LibraryViewModel : ViewModelBase
                 if (value is not null)
                 {
                     _selectedMediaService.SelectedMedia = value;
+                    _playbackService.Play(value.FilePath);
+                    _fakePlaybackDriver.Start(180);
                 }
 
                 OnPropertyChanged(nameof(HasSelectedMedia));

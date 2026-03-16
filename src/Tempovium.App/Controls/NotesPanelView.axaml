@@ -1,0 +1,79 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Tempovium.ViewModels"
+             xmlns:localvm="using:Tempovium.ViewModels"
+             xmlns:converters="using:Tempovium.Converters"
+             x:Class="Tempovium.Controls.NotesPanelView"
+             x:DataType="vm:NotesPanelViewModel">
+    <UserControl.Resources>
+        <converters:SecondsToTimestampConverter x:Key="SecondsToTimestampConverter"/>
+    </UserControl.Resources>
+
+    <Border BorderBrush="Gray"
+            BorderThickness="1"
+            Padding="16"
+            Margin="0,12,0,0">
+
+        <StackPanel Spacing="10">
+
+            <TextBlock Text="Notas sincronizadas"
+                       FontSize="16"
+                       FontWeight="Bold"/>
+
+            <TextBox Text="{Binding NewNoteContent}"
+                     Watermark="Escribe una nota para el segundo actual..."
+                     AcceptsReturn="True"
+                     TextWrapping="Wrap"
+                     MinHeight="80"/>
+
+            <Button Content="{Binding AddNoteButtonText}"
+                    HorizontalAlignment="Left"
+                    Click="AddNote_Click"/>
+
+            <Separator/>
+
+            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                          MaxHeight="400">
+
+                <ItemsControl ItemsSource="{Binding Notes}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="localvm:NoteItemViewModel">
+                            <Border BorderThickness="1"
+                                    Padding="10"
+                                    Margin="0,0,0,8"
+                                    BorderBrush="LightGray">
+                                <StackPanel Spacing="6">
+                                    <TextBlock Text="Nota activa"
+                                               FontWeight="Bold"
+                                               IsVisible="{Binding IsActive}"/>
+
+                                    <Grid ColumnDefinitions="Auto,*,Auto"
+                                          ColumnSpacing="10">
+                                        <Button Content="{Binding TimestampSeconds, Converter={StaticResource SecondsToTimestampConverter}}"
+                                                Click="JumpToNote_Click"
+                                                HorizontalAlignment="Left"
+                                                VerticalAlignment="Top"/>
+
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding Content}"
+                                                   TextWrapping="Wrap"
+                                                   VerticalAlignment="Center"/>
+
+                                        <Button Grid.Column="2"
+                                                Content="Eliminar"
+                                                Click="DeleteNote_Click"
+                                                HorizontalAlignment="Right"
+                                                VerticalAlignment="Top"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+            </ScrollViewer>
+
+        </StackPanel>
+
+    </Border>
+</UserControl>

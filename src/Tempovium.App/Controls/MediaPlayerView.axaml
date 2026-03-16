@@ -1,23 +1,78 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vlc="clr-namespace:LibVLCSharp.Avalonia;assembly=LibVLCSharp.Avalonia"
              xmlns:vm="using:Tempovium.ViewModels"
+             xmlns:converters="using:Tempovium.Converters"
              x:Class="Tempovium.Controls.MediaPlayerView"
              x:DataType="vm:MediaPlayerViewModel">
+    <UserControl.Resources>
+        <converters:SecondsToTimestampConverter x:Key="SecondsToTimestampConverter"/>
+    </UserControl.Resources>
 
     <Border BorderBrush="Gray"
             BorderThickness="1"
-            Padding="8"
-            Margin="8">
+            MinHeight="300"
+            Padding="16">
 
-        <StackPanel Spacing="8">
+        <StackPanel Spacing="10">
 
-            <TextBlock Text="Reproductor"
-                       FontSize="20"
+            <TextBlock Text="Panel de reproducción"
+                       FontSize="16"
                        FontWeight="Bold"/>
 
-            <vlc:VideoView MediaPlayer="{Binding MediaPlayer}"
-                           Height="300"/>
+            <TextBlock Text="{Binding BackendStatus}"
+                       Opacity="0.7"/>
+
+            <Separator/>
+
+            <StackPanel Spacing="6"
+                        IsVisible="{Binding HasSelectedMedia}">
+
+                <TextBlock Text="Título"
+                           FontWeight="SemiBold"/>
+
+                <TextBlock Text="{Binding CurrentMediaTitle}"/>
+
+                <TextBlock Text="Tipo"
+                           FontWeight="SemiBold"
+                           Margin="0,8,0,0"/>
+
+                <TextBlock Text="{Binding CurrentMediaType}"/>
+
+                <TextBlock Text="Ruta"
+                           FontWeight="SemiBold"
+                           Margin="0,8,0,0"/>
+
+                <TextBlock Text="{Binding CurrentMediaPath}"
+                           TextWrapping="Wrap"
+                           Opacity="0.75"/>
+                
+                <Separator Margin="0,12,0,6"/>
+
+                <TextBlock Text="Timeline"
+                           FontWeight="SemiBold"/>
+
+                <Slider Minimum="0"
+                        Maximum="{Binding DurationSeconds}"
+                        Value="{Binding PositionSeconds}"
+                        IsEnabled="False"/>
+
+                <Grid ColumnDefinitions="Auto,*,Auto">
+    
+                    <TextBlock Text="{Binding PositionSeconds, Converter={StaticResource SecondsToTimestampConverter}}"
+                               Opacity="0.7"/>
+
+                    <TextBlock Grid.Column="2"
+                               Text="{Binding DurationSeconds, Converter={StaticResource SecondsToTimestampConverter}}"
+                               Opacity="0.7"/>
+
+                </Grid>
+
+            </StackPanel>
+
+            <TextBlock Text="Selecciona un medio en la biblioteca"
+                       HorizontalAlignment="Center"
+                       Opacity="0.6"
+                       IsVisible="{Binding HasNoSelectedMedia}"/>
 
         </StackPanel>
 

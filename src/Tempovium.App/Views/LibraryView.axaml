@@ -1,140 +1,115 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Tempovium.ViewModels"
+             xmlns:controls="using:Tempovium.Controls"
              x:Class="Tempovium.Views.LibraryView"
              x:DataType="vm:LibraryViewModel">
 
-    <Grid Margin="20"
-          RowDefinitions="Auto,Auto,*"
-          ColumnDefinitions="2*,3*"
-          ColumnSpacing="16"
-          RowSpacing="12">
+  <Grid Margin="20"
+        RowDefinitions="Auto,Auto,*"
+        ColumnDefinitions="2*,3*"
+        ColumnSpacing="16"
+        RowSpacing="12">
 
-        <!-- Encabezado -->
-        <StackPanel Grid.Row="0"
-                    Grid.Column="0"
-                    Grid.ColumnSpan="2"
-                    Orientation="Horizontal"
-                    Spacing="10">
-
-            <TextBlock Text="Biblioteca"
-                       FontSize="28"
-                       FontWeight="Bold"/>
-
-            <Button Content="Importar carpeta"
-                    Command="{Binding ImportFolderCommand}"/>
-
-        </StackPanel>
-
-        <!-- Mensaje de estado -->
-        <TextBlock Grid.Row="1"
-                   Grid.Column="0"
-                   Grid.ColumnSpan="2"
-                   Text="{Binding StatusMessage}"
-                   TextWrapping="Wrap"/>
-
-        <!-- Lista izquierda -->
-        <Border Grid.Row="2"
+    <!-- Encabezado -->
+    <StackPanel Grid.Row="0"
                 Grid.Column="0"
-                BorderBrush="Gray"
-                BorderThickness="1"
-                Padding="8">
+                Grid.ColumnSpan="2"
+                Orientation="Horizontal"
+                Spacing="10">
+      <TextBlock Text="Biblioteca"
+                 FontSize="28"
+                 FontWeight="Bold"/>
+      <Button Content="Importar carpeta"
+              Command="{Binding ImportFolderCommand}"/>
+    </StackPanel>
 
-            <ListBox ItemsSource="{Binding MediaItems}"
-                     SelectedItem="{Binding SelectedMedia, Mode=TwoWay}">
+    <!-- Mensaje de estado -->
+    <TextBlock Grid.Row="1"
+               Grid.Column="0"
+               Grid.ColumnSpan="2"
+               Text="{Binding StatusMessage}"
+               TextWrapping="Wrap"/>
 
-                <ListBox.ItemTemplate>
-                    <DataTemplate>
-                        <Border BorderBrush="Gray"
-                                BorderThickness="1"
-                                Padding="10"
-                                Margin="4">
+    <!-- Lista izquierda -->
+    <Border Grid.Row="2"
+            Grid.Column="0"
+            BorderBrush="Gray"
+            BorderThickness="1"
+            Padding="8">
+      <ListBox ItemsSource="{Binding MediaItems}"
+               SelectedItem="{Binding SelectedMedia, Mode=TwoWay}">
+        <ListBox.ItemTemplate>
+          <DataTemplate>
+            <Border BorderBrush="Gray"
+                    BorderThickness="1"
+                    Padding="10"
+                    Margin="4">
+              <StackPanel>
+                <TextBlock Text="{Binding Title}"
+                           FontWeight="Bold"/>
+                <TextBlock Text="{Binding FilePath}"
+                           FontSize="12"
+                           TextWrapping="Wrap"/>
+              </StackPanel>
+            </Border>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </Border>
 
-                            <StackPanel>
-                                <TextBlock Text="{Binding Title}"
-                                           FontWeight="Bold"/>
+    <!-- Panel derecho -->
+    <Border Grid.Row="2"
+            Grid.Column="1"
+            BorderBrush="Gray"
+            BorderThickness="1"
+            Padding="12">
+      <Grid RowDefinitions="Auto,*"
+            RowSpacing="10">
 
-                                <TextBlock Text="{Binding FilePath}"
-                                           FontSize="12"
-                                           TextWrapping="Wrap"/>
-                            </StackPanel>
+        <TextBlock Text="Panel de reproducción"
+                   FontSize="20"
+                   FontWeight="Bold"/>
 
-                        </Border>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
+        <Grid Grid.Row="1">
 
-            </ListBox>
+          <!-- Estado vacío -->
+          <StackPanel IsVisible="{Binding HasNoSelectedMedia}"
+                      Spacing="10">
+            <TextBlock Text="Selecciona un medio de la biblioteca para comenzar."
+                       FontSize="14"
+                       Opacity="0.7"
+                       TextWrapping="Wrap"/>
+          </StackPanel>
 
-        </Border>
-
-        <!-- Panel derecho -->
-        <Border Grid.Row="2"
-                Grid.Column="1"
-                BorderBrush="Gray"
-                BorderThickness="1"
-                Padding="12">
-
-            <Grid RowDefinitions="Auto,*"
+          <!-- Estado con selección -->
+          <ScrollViewer IsVisible="{Binding HasSelectedMedia}"
+                        VerticalScrollBarVisibility="Auto"
+                        HorizontalScrollBarVisibility="Disabled">
+            <Grid RowDefinitions="Auto,Auto,*"
                   RowSpacing="10">
 
-                <TextBlock Text="Panel de reproducción"
-                           FontSize="20"
-                           FontWeight="Bold"/>
+              <StackPanel Spacing="6">
+                <TextBlock Text="{Binding SelectedMediaTitle}"
+                           FontWeight="Bold"
+                           FontSize="16"
+                           TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding SelectedMediaFolderPath}"
+                           FontSize="12"
+                           Opacity="0.8"
+                           TextWrapping="Wrap"/>
+              </StackPanel>
 
-                <Grid Grid.Row="1">
+              <controls:MediaPlayerView Grid.Row="1"/>
 
-                    <!-- Estado vacío -->
-                    <StackPanel IsVisible="{Binding HasNoSelectedMedia}"
-                                Spacing="10">
-
-                        <TextBlock Text="Selecciona un medio de la biblioteca para comenzar."
-                                   FontSize="14"
-                                   Opacity="0.7"
-                                   TextWrapping="Wrap"/>
-
-                    </StackPanel>
-
-                    <!-- Estado con selección -->
-                    <Grid IsVisible="{Binding HasSelectedMedia}"
-                          RowDefinitions="Auto,Auto,*,Auto"
-                          RowSpacing="10">
-
-                        <StackPanel Spacing="6">
-                            <TextBlock Text="{Binding SelectedMediaTitle}"
-                                       FontWeight="Bold"
-                                       FontSize="16"
-                                       TextWrapping="Wrap"/>
-
-                            <TextBlock Text="{Binding SelectedMediaFolderPath}"
-                                       FontSize="12"
-                                       Opacity="0.8"
-                                       TextWrapping="Wrap"/>
-                        </StackPanel>
-
-                        <Border Grid.Row="1"
-                                BorderBrush="Gray"
-                                BorderThickness="1"
-                                MinHeight="300"
-                                Padding="12">
-
-                            <TextBlock Text="Aquí irá el reproductor VLC."
-                                       Opacity="0.7"/>
-
-                        </Border>
-
-                        <TextBlock Grid.Row="3"
-                                   Text="Notas del medio aparecerán aquí."
-                                   FontSize="12"
-                                   Opacity="0.6"/>
-
-                    </Grid>
-
-                </Grid>
+              <controls:NotesPanelView Grid.Row="2"/>
 
             </Grid>
+          </ScrollViewer>
 
-        </Border>
+        </Grid>
+      </Grid>
+    </Border>
 
-    </Grid>
-
+  </Grid>
 </UserControl>

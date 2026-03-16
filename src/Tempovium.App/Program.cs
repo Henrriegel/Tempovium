@@ -7,7 +7,7 @@ using Tempovium.Infrastructure.DependencyInjection;
 using Tempovium.Infrastructure.Persistence;
 using Tempovium.ViewModels;
 using Tempovium.Core.Services;
-using LibVLCSharp.Shared;
+using Tempovium.Services;
 
 namespace Tempovium;
 
@@ -18,8 +18,6 @@ internal class Program
     [STAThread]
     public static void Main(string[] args)
     {
-        Environment.SetEnvironmentVariable("VLC_PLUGIN_PATH", "/Applications/VLC.app/Contents/MacOS/plugins");
-        LibVLCSharp.Shared.Core.Initialize("/Applications/VLC.app/Contents/MacOS/lib");
         
         AppHost = Host.CreateDefaultBuilder(args)
             .ConfigureServices((context, services) =>
@@ -28,6 +26,13 @@ internal class Program
                 services.AddSingleton<MainWindowViewModel>();
                 services.AddTransient<LoginViewModel>();
                 services.AddTransient<LibraryViewModel>();
+                services.AddSingleton<MediaPlayerViewModel>();
+                services.AddSingleton<PlaybackTimelineService>();
+                services.AddSingleton<FakePlaybackDriverService>();
+                services.AddSingleton<NotesPanelViewModel>();
+                //Desafortunadamente VlcLib no sirve en mac con apple silicon
+                //services.AddSingleton<IPlaybackService, VlcPlaybackService>();
+                services.AddSingleton<IPlaybackService, NullPlaybackService>();
             })
             .Build();
 

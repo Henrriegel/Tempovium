@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Tempovium.Core.Interfaces;
+using Tempovium.Core.Interfaces.Repositories;
 using Tempovium.Core.Services;
 using Tempovium.Infrastructure.Persistence;
 using Tempovium.Infrastructure.Repositories;
@@ -19,6 +20,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IMediaRepository, MediaRepository>();
         services.AddScoped<IFileHashService, FileHashService>();
         services.AddScoped<IMediaImportService, MediaImportService>();
+        services.AddScoped<IMediaNoteRepository, MediaNoteRepository>();
 
         services.AddSingleton<MediaFileTypeDetector>();
         services.AddSingleton<MediaFileValidator>();
