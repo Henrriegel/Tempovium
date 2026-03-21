@@ -42,7 +42,6 @@ public class LibraryViewModel : ViewModelBase
         _fakePlaybackDriver = fakePlaybackDriver;
 
         ImportFolderCommand = new SimpleCommand(ExecuteImportFolder);
-
         _ = LoadLibraryAsync();
     }
 
@@ -67,9 +66,11 @@ public class LibraryViewModel : ViewModelBase
             {
                 if (value is not null)
                 {
+                    // Importante:
+                    // aquí ya NO llamamos a _playbackService.Play(...)
+                    // porque ahora el reproductor embebido en MediaPlayerView
+                    // es quien observa SelectedMediaService y carga el medio.
                     _selectedMediaService.SelectedMedia = value;
-                    _playbackService.Play(value.FilePath);
-                    _fakePlaybackDriver.Start(180);
                 }
 
                 OnPropertyChanged(nameof(HasSelectedMedia));
@@ -81,7 +82,6 @@ public class LibraryViewModel : ViewModelBase
     }
 
     public bool HasSelectedMedia => SelectedMedia is not null;
-
     public bool HasNoSelectedMedia => SelectedMedia is null;
 
     public string SelectedMediaTitle => SelectedMedia?.Title ?? string.Empty;
@@ -99,9 +99,7 @@ public class LibraryViewModel : ViewModelBase
             return;
 
         var user = _userSessionService.CurrentUser!;
-
         var media = await _mediaRepository.GetByUserAsync(user.Id);
-
         MediaItems = media;
     }
 
@@ -113,10 +111,10 @@ public class LibraryViewModel : ViewModelBase
             return;
         }
 
-        var topLevel = TopLevel.GetTopLevel(Application.Current?.ApplicationLifetime
-            is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop
-            ? desktop.MainWindow
-            : null);
+        var topLevel = TopLevel.GetTopLevel(
+            Application.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop
+                ? desktop.MainWindow
+                : null);
 
         if (topLevel == null)
         {
@@ -124,10 +122,11 @@ public class LibraryViewModel : ViewModelBase
             return;
         }
 
-        var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
-        {
-            Title = "Selecciona una carpeta con medios"
-        });
+        var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(
+            new FolderPickerOpenOptions
+            {
+                Title = "Selecciona una carpeta con medios"
+            });
 
         if (folders.Count == 0)
         {
@@ -136,7 +135,6 @@ public class LibraryViewModel : ViewModelBase
         }
 
         var folderPath = folders[0].Path.LocalPath;
-
         if (string.IsNullOrWhiteSpace(folderPath))
         {
             StatusMessage = "La carpeta seleccionada no tiene una ruta válida.";
@@ -144,7 +142,6 @@ public class LibraryViewModel : ViewModelBase
         }
 
         var user = _userSessionService.CurrentUser!;
-
         var importedItems = await _mediaImportService.ImportFolderAsync(user.Id, folderPath);
 
         await LoadLibraryAsync();
@@ -152,7 +149,7 @@ public class LibraryViewModel : ViewModelBase
         StatusMessage = $"Importación completada. Se agregaron {importedItems.Count} archivo(s).";
     }
 
-    private class SimpleCommand : ICommand
+    public class SimpleCommand : ICommand
     {
         private readonly Action _execute;
 
@@ -161,10 +158,10 @@ public class LibraryViewModel : ViewModelBase
             _execute = execute;
         }
 
-        public event EventHandler? CanExecuteChanged;
-
         public bool CanExecute(object? parameter) => true;
 
         public void Execute(object? parameter) => _execute();
+
+        public event EventHandler? CanExecuteChanged;
     }
 }

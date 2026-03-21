@@ -64,50 +64,48 @@
             BorderBrush="Gray"
             BorderThickness="1"
             Padding="12">
-      <Grid RowDefinitions="Auto,*"
-            RowSpacing="10">
+      <Grid>
 
-        <TextBlock Text="Panel de reproducción"
-                   FontSize="20"
-                   FontWeight="Bold"/>
+        <!-- Estado vacío -->
+        <StackPanel IsVisible="{Binding HasNoSelectedMedia}"
+                    VerticalAlignment="Center"
+                    HorizontalAlignment="Center"
+                    Spacing="10">
+          <TextBlock Text="Selecciona un medio de la biblioteca para comenzar."
+                     FontSize="14"
+                     Opacity="0.7"
+                     TextWrapping="Wrap"/>
+        </StackPanel>
 
-        <Grid Grid.Row="1">
+        <!-- Estado con selección -->
+        <ScrollViewer IsVisible="{Binding HasSelectedMedia}"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+          <Grid RowDefinitions="Auto,*,Auto"
+                RowSpacing="12">
 
-          <!-- Estado vacío -->
-          <StackPanel IsVisible="{Binding HasNoSelectedMedia}"
-                      Spacing="10">
-            <TextBlock Text="Selecciona un medio de la biblioteca para comenzar."
-                       FontSize="14"
-                       Opacity="0.7"
-                       TextWrapping="Wrap"/>
-          </StackPanel>
+            <!-- Encabezado del medio seleccionado -->
+            <StackPanel Grid.Row="0"
+                        Spacing="4">
+              <TextBlock Text="{Binding SelectedMediaTitle}"
+                         FontSize="22"
+                         FontWeight="Bold"
+                         TextWrapping="Wrap"/>
 
-          <!-- Estado con selección -->
-          <ScrollViewer IsVisible="{Binding HasSelectedMedia}"
-                        VerticalScrollBarVisibility="Auto"
-                        HorizontalScrollBarVisibility="Disabled">
-            <Grid RowDefinitions="Auto,Auto,*"
-                  RowSpacing="10">
+              <TextBlock Text="{Binding SelectedMediaFolderPath}"
+                         Opacity="0.75"
+                         TextWrapping="Wrap"/>
+            </StackPanel>
 
-              <StackPanel Spacing="6">
-                <TextBlock Text="{Binding SelectedMediaTitle}"
-                           FontWeight="Bold"
-                           FontSize="16"
-                           TextWrapping="Wrap"/>
-                <TextBlock Text="{Binding SelectedMediaFolderPath}"
-                           FontSize="12"
-                           Opacity="0.8"
-                           TextWrapping="Wrap"/>
-              </StackPanel>
+            <!-- Reproductor -->
+            <controls:MediaPlayerView Grid.Row="1"/>
 
-              <controls:MediaPlayerView Grid.Row="1"/>
+            <!-- Notas -->
+            <controls:NotesPanelView Grid.Row="2"/>
 
-              <controls:NotesPanelView Grid.Row="2"/>
+          </Grid>
+        </ScrollViewer>
 
-            </Grid>
-          </ScrollViewer>
-
-        </Grid>
       </Grid>
     </Border>
 

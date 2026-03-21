@@ -14,6 +14,7 @@ public class NotesPanelViewModel : ViewModelBase
     private readonly IMediaNoteRepository _noteRepository;
     private readonly SelectedMediaService _selectedMediaService;
     private readonly PlaybackTimelineService _timelineService;
+    private readonly PlaybackControlService _playbackControlService;
 
     private string _newNoteContent = string.Empty;
     private NoteItemViewModel? _activeNote;
@@ -49,11 +50,13 @@ public class NotesPanelViewModel : ViewModelBase
     public NotesPanelViewModel(
         IMediaNoteRepository noteRepository,
         SelectedMediaService selectedMediaService,
-        PlaybackTimelineService timelineService)
+        PlaybackTimelineService timelineService,
+        PlaybackControlService playbackControlService)
     {
         _noteRepository = noteRepository;
         _selectedMediaService = selectedMediaService;
         _timelineService = timelineService;
+        _playbackControlService = playbackControlService;
 
         _selectedMediaService.PropertyChanged += async (_, e) =>
         {
@@ -137,7 +140,12 @@ public class NotesPanelViewModel : ViewModelBase
         if (note == null)
             return;
 
+        // Actualizamos de inmediato la UI local
         _timelineService.PositionSeconds = note.TimestampSeconds;
+
+        // Y ahora sí pedimos al reproductor real que haga seek
+        _playbackControlService.RequestSeek(note.TimestampSeconds);
+
         UpdateActiveNote();
     }
 

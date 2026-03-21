@@ -17,7 +17,6 @@
         <PackageReference Include="Avalonia.Desktop" Version="11.3.12" />
         <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.12" />
         <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.12" />
-        <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
         <PackageReference Include="Avalonia.Diagnostics" Version="11.3.12">
             <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
             <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
@@ -25,13 +24,65 @@
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.1" />
         <PackageReference Include="LibVLCSharp" Version="3.9.6" />
         <PackageReference Include="LibVLCSharp.Avalonia" Version="3.9.6" />
+        <PackageReference Include="LibMPVSharp.Avalonia" Version="0.0.1-beta" />
+        <PackageReference Include="LibMPVSharp" Version="0.0.1-beta" />
         <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.5" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.5" />
         <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.5" />
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Tempovium.Core\Tempovium.Core.csproj" />
-      <ProjectReference Include="..\Tempovium.Infrastructure\Tempovium.Infrastructure.csproj" />
+        <ProjectReference Include="..\Tempovium.Core\Tempovium.Core.csproj" />
+        <ProjectReference Include="..\Tempovium.Infrastructure\Tempovium.Infrastructure.csproj" />
     </ItemGroup>
+
+    <ItemGroup>
+        <None Include="Native\macOS\libmpv-2.dylib">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <Link>libmpv-2.dylib</Link>
+        </None>
+        <None Include="Native\macOS\libmpv.2.dylib">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <Link>libmpv.2.dylib</Link>
+        </None>
+        <None Include="Native\macOS\libmpv.dylib">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <Link>libmpv.dylib</Link>
+        </None>
+    </ItemGroup>
+
+    <Target Name="CopyLibMpvNativeLibraries" AfterTargets="Build" Condition="$([MSBuild]::IsOSPlatform('OSX'))">
+        <MakeDir Directories="$(OutDir)runtimes/osx/native" />
+        <MakeDir Directories="$(OutDir)runtimes/osx-arm64/native" />
+
+        <Copy SourceFiles="$(MSBuildProjectDirectory)/Native/macOS/libmpv-2.dylib"
+              DestinationFiles="$(OutDir)libmpv-2.dylib"
+              SkipUnchangedFiles="true" />
+        <Copy SourceFiles="$(MSBuildProjectDirectory)/Native/macOS/libmpv.2.dylib"
+              DestinationFiles="$(OutDir)libmpv.2.dylib"
+              SkipUnchangedFiles="true" />
+        <Copy SourceFiles="$(MSBuildProjectDirectory)/Native/macOS/libmpv.dylib"
+              DestinationFiles="$(OutDir)libmpv.dylib"
+              SkipUnchangedFiles="true" />
+
+        <Copy SourceFiles="$(MSBuildProjectDirectory)/Native/macOS/libmpv-2.dylib"
+              DestinationFiles="$(OutDir)runtimes/osx/native/libmpv-2.dylib"
+              SkipUnchangedFiles="true" />
+        <Copy SourceFiles="$(MSBuildProjectDirectory)/Native/macOS/libmpv.2.dylib"
+              DestinationFiles="$(OutDir)runtimes/osx/native/libmpv.2.dylib"
+              SkipUnchangedFiles="true" />
+        <Copy SourceFiles="$(MSBuildProjectDirectory)/Native/macOS/libmpv.dylib"
+              DestinationFiles="$(OutDir)runtimes/osx/native/libmpv.dylib"
+              SkipUnchangedFiles="true" />
+
+        <Copy SourceFiles="$(MSBuildProjectDirectory)/Native/macOS/libmpv-2.dylib"
+              DestinationFiles="$(OutDir)runtimes/osx-arm64/native/libmpv-2.dylib"
+              SkipUnchangedFiles="true" />
+        <Copy SourceFiles="$(MSBuildProjectDirectory)/Native/macOS/libmpv.2.dylib"
+              DestinationFiles="$(OutDir)runtimes/osx-arm64/native/libmpv.2.dylib"
+              SkipUnchangedFiles="true" />
+        <Copy SourceFiles="$(MSBuildProjectDirectory)/Native/macOS/libmpv.dylib"
+              DestinationFiles="$(OutDir)runtimes/osx-arm64/native/libmpv.dylib"
+              SkipUnchangedFiles="true" />
+    </Target>
 </Project>

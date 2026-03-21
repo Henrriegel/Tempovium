@@ -12,7 +12,7 @@
     <Border BorderBrush="Gray"
             BorderThickness="1"
             Padding="16"
-            Margin="0,12,0,0">
+            Margin="0">
 
         <StackPanel Spacing="10">
 
@@ -24,7 +24,7 @@
                      Watermark="Escribe una nota para el segundo actual..."
                      AcceptsReturn="True"
                      TextWrapping="Wrap"
-                     MinHeight="80"/>
+                     MinHeight="60"/>
 
             <Button Content="{Binding AddNoteButtonText}"
                     HorizontalAlignment="Left"
@@ -33,7 +33,7 @@
             <Separator/>
 
             <ScrollViewer VerticalScrollBarVisibility="Auto"
-                          MaxHeight="400">
+                          MaxHeight="220">
 
                 <ItemsControl ItemsSource="{Binding Notes}">
                     <ItemsControl.ItemTemplate>

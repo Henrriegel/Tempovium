@@ -1,81 +1,88 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Tempovium.ViewModels"
+             xmlns:mpv="using:LibMPVSharp.Avalonia"
              xmlns:converters="using:Tempovium.Converters"
              x:Class="Tempovium.Controls.MediaPlayerView"
              x:DataType="vm:MediaPlayerViewModel">
-    <UserControl.Resources>
-        <converters:SecondsToTimestampConverter x:Key="SecondsToTimestampConverter"/>
-    </UserControl.Resources>
 
-    <Border BorderBrush="Gray"
-            BorderThickness="1"
-            MinHeight="300"
-            Padding="16">
+  <UserControl.Resources>
+    <converters:SecondsToTimestampConverter x:Key="SecondsToTimestampConverter"/>
+  </UserControl.Resources>
 
-        <StackPanel Spacing="10">
+  <Border BorderBrush="Gray"
+          BorderThickness="1"
+          Padding="16"
+          MinHeight="360">
 
-            <TextBlock Text="Panel de reproducción"
-                       FontSize="16"
-                       FontWeight="Bold"/>
+    <Grid RowDefinitions="Auto,*,Auto"
+          RowSpacing="12">
 
-            <TextBlock Text="{Binding BackendStatus}"
-                       Opacity="0.7"/>
+      <!-- Encabezado del reproductor -->
+      <StackPanel Grid.Row="0"
+                  Spacing="4">
+        <TextBlock Text="Panel de reproducción"
+                   FontSize="16"
+                   FontWeight="Bold"/>
 
-            <Separator/>
+        <TextBlock Text="{Binding BackendStatus}"
+                   Opacity="0.7"/>
+      </StackPanel>
 
-            <StackPanel Spacing="6"
-                        IsVisible="{Binding HasSelectedMedia}">
+      <!-- Área de video -->
+      <Border Grid.Row="1"
+              BorderBrush="DarkGray"
+              BorderThickness="1"
+              Background="Black"
+              MinHeight="300">
 
-                <TextBlock Text="Título"
-                           FontWeight="SemiBold"/>
+        <Grid>
+          <mpv:VideoView x:Name="VideoPlayer"
+                         IsVisible="{Binding IsNotLoading}"
+                         HorizontalAlignment="Stretch"
+                         VerticalAlignment="Stretch"/>
 
-                <TextBlock Text="{Binding CurrentMediaTitle}"/>
-
-                <TextBlock Text="Tipo"
-                           FontWeight="SemiBold"
-                           Margin="0,8,0,0"/>
-
-                <TextBlock Text="{Binding CurrentMediaType}"/>
-
-                <TextBlock Text="Ruta"
-                           FontWeight="SemiBold"
-                           Margin="0,8,0,0"/>
-
-                <TextBlock Text="{Binding CurrentMediaPath}"
-                           TextWrapping="Wrap"
-                           Opacity="0.75"/>
-                
-                <Separator Margin="0,12,0,6"/>
-
-                <TextBlock Text="Timeline"
-                           FontWeight="SemiBold"/>
-
-                <Slider Minimum="0"
-                        Maximum="{Binding DurationSeconds}"
-                        Value="{Binding PositionSeconds}"
-                        IsEnabled="False"/>
-
-                <Grid ColumnDefinitions="Auto,*,Auto">
-    
-                    <TextBlock Text="{Binding PositionSeconds, Converter={StaticResource SecondsToTimestampConverter}}"
-                               Opacity="0.7"/>
-
-                    <TextBlock Grid.Column="2"
-                               Text="{Binding DurationSeconds, Converter={StaticResource SecondsToTimestampConverter}}"
-                               Opacity="0.7"/>
-
-                </Grid>
-
-            </StackPanel>
-
-            <TextBlock Text="Selecciona un medio en la biblioteca"
+          <StackPanel IsVisible="{Binding IsLoading}"
+                      VerticalAlignment="Center"
+                      HorizontalAlignment="Center"
+                      Spacing="10">
+            <ProgressBar IsIndeterminate="True"
+                         Width="180"/>
+            <TextBlock Text="Preparando reproductor..."
                        HorizontalAlignment="Center"
-                       Opacity="0.6"
-                       IsVisible="{Binding HasNoSelectedMedia}"/>
+                       Opacity="0.7"/>
+          </StackPanel>
+        </Grid>
 
-        </StackPanel>
+      </Border>
 
-    </Border>
+      <!-- Estado + timeline -->
+      <StackPanel Grid.Row="2"
+                  Spacing="8">
+        <TextBlock Text="{Binding PlayerStatusText}"
+                   Opacity="0.7"/>
 
+        <Separator/>
+
+        <TextBlock Text="Timeline"
+                   FontWeight="SemiBold"/>
+
+        <Slider Minimum="0"
+                Maximum="{Binding DurationSeconds}"
+                Value="{Binding PositionSeconds}"
+                IsEnabled="False"/>
+
+        <Grid ColumnDefinitions="Auto,*,Auto">
+          <TextBlock Text="{Binding PositionSeconds, Converter={StaticResource SecondsToTimestampConverter}}"
+                     Opacity="0.7"/>
+
+          <TextBlock Grid.Column="2"
+                     Text="{Binding DurationSeconds, Converter={StaticResource SecondsToTimestampConverter}}"
+                     Opacity="0.7"/>
+        </Grid>
+      </StackPanel>
+
+    </Grid>
+
+  </Border>
 </UserControl>

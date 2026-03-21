@@ -12,17 +12,14 @@ public class MediaPlayerViewModel : ViewModelBase
     private readonly PlaybackTimelineService _timelineService;
 
     private string _backendStatus;
+    private string _nativeHostDebugText = "Host nativo aún no inicializado";
     private string _currentMediaTitle = "Ningún medio seleccionado";
     private string _currentMediaPath = "Sin ruta";
     private string _currentMediaType = "Sin tipo";
     private bool _hasSelectedMedia;
+    private bool _isLoading;
+    private string _playerStatusText = "Sin reproducción activa";
 
-    public double PositionSeconds => _timelineService.PositionSeconds;
-
-    public double DurationSeconds => _timelineService.DurationSeconds;
-
-    public bool IsPlaying => _timelineService.IsPlaying;
-    
     public MediaPlayerViewModel(
         SelectedMediaService selectedMediaService,
         IPlaybackService playbackService,
@@ -37,12 +34,18 @@ public class MediaPlayerViewModel : ViewModelBase
             : $"Backend no disponible: {playbackService.BackendName}";
 
         _selectedMediaService.PropertyChanged += OnSelectedMediaChanged;
-        
+
         _timelineService.PropertyChanged += (_, __) =>
         {
             OnPropertyChanged(nameof(PositionSeconds));
             OnPropertyChanged(nameof(DurationSeconds));
             OnPropertyChanged(nameof(IsPlaying));
+
+            if (_timelineService.IsPlaying)
+            {
+                IsLoading = false;
+                PlayerStatusText = "Reproduciendo";
+            }
         };
 
         ApplySelectedMedia(_selectedMediaService.SelectedMedia);
@@ -75,16 +78,34 @@ public class MediaPlayerViewModel : ViewModelBase
     public bool HasSelectedMedia
     {
         get => _hasSelectedMedia;
-        set
-        {
-            if (SetProperty(ref _hasSelectedMedia, value))
-            {
-                OnPropertyChanged(nameof(HasNoSelectedMedia));
-            }
-        }
+        set => SetProperty(ref _hasSelectedMedia, value);
     }
 
     public bool HasNoSelectedMedia => !HasSelectedMedia;
+
+    public bool IsLoading
+    {
+        get => _isLoading;
+        set
+        {
+            if (SetProperty(ref _isLoading, value))
+            {
+                OnPropertyChanged(nameof(IsNotLoading));
+            }
+        }
+    }
+    
+    public bool IsNotLoading => !IsLoading;
+
+    public string PlayerStatusText
+    {
+        get => _playerStatusText;
+        set => SetProperty(ref _playerStatusText, value);
+    }
+
+    public double PositionSeconds => _timelineService.PositionSeconds;
+    public double DurationSeconds => _timelineService.DurationSeconds;
+    public bool IsPlaying => _timelineService.IsPlaying;
 
     private void OnSelectedMediaChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -102,6 +123,9 @@ public class MediaPlayerViewModel : ViewModelBase
             CurrentMediaTitle = "Ningún medio seleccionado";
             CurrentMediaPath = "Sin ruta";
             CurrentMediaType = "Sin tipo";
+            IsLoading = false;
+            PlayerStatusText = "Sin reproducción activa";
+            OnPropertyChanged(nameof(HasNoSelectedMedia));
             return;
         }
 
@@ -109,5 +133,19 @@ public class MediaPlayerViewModel : ViewModelBase
         CurrentMediaTitle = media.Title;
         CurrentMediaPath = media.FilePath;
         CurrentMediaType = media.MediaType.ToString();
+        IsLoading = true;
+        PlayerStatusText = "Cargando medio...";
+        OnPropertyChanged(nameof(HasNoSelectedMedia));
+    }
+    
+    public string NativeHostDebugText
+    {
+        get => _nativeHostDebugText;
+        set => SetProperty(ref _nativeHostDebugText, value);
+    }
+    
+    public void SetNativeHostDebugInfo(string descriptor, nint handle)
+    {
+        NativeHostDebugText = $"Host nativo listo: {descriptor} | Handle: {handle}";
     }
 }
