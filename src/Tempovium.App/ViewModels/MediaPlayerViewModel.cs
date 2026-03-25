@@ -1,14 +1,19 @@
+using System;
 using System.ComponentModel;
+using System.Threading.Tasks;
 using Tempovium.Core.Entities;
 using Tempovium.Core.Services;
 using Tempovium.Services;
+using Tempovium.Media.Abstractions.Contracts;
+using Tempovium.Media.Mac.Backends;
 
 namespace Tempovium.ViewModels;
 
 public class MediaPlayerViewModel : ViewModelBase
 {
+    public MacMediaBackend? MacBackend => _mediaBackend as MacMediaBackend;
     private readonly SelectedMediaService _selectedMediaService;
-    private readonly IPlaybackService _playbackService;
+    private readonly IMediaBackend _mediaBackend;
     private readonly PlaybackTimelineService _timelineService;
 
     private string _backendStatus;
@@ -22,16 +27,21 @@ public class MediaPlayerViewModel : ViewModelBase
 
     public MediaPlayerViewModel(
         SelectedMediaService selectedMediaService,
-        IPlaybackService playbackService,
+        IMediaBackend mediaBackend,
         PlaybackTimelineService timelineService)
     {
         _selectedMediaService = selectedMediaService;
-        _playbackService = playbackService;
+        _mediaBackend = mediaBackend;
         _timelineService = timelineService;
 
-        _backendStatus = playbackService.IsAvailable
-            ? $"Backend activo: {playbackService.BackendName}"
-            : $"Backend no disponible: {playbackService.BackendName}";
+        if (mediaBackend is IMediaBackendInfo backendInfo)
+        {
+            _backendStatus = $"Backend activo: {backendInfo.DisplayName}";
+        }
+        else
+        {
+            _backendStatus = "Backend activo: desconocido";
+        }
 
         _selectedMediaService.PropertyChanged += OnSelectedMediaChanged;
 
@@ -48,7 +58,33 @@ public class MediaPlayerViewModel : ViewModelBase
             }
         };
 
+        _mediaBackend.MediaOpened += OnMediaOpened;
+        _mediaBackend.MediaFailed += OnMediaFailed;
+        _mediaBackend.PositionChanged += OnBackendPositionChanged;
+
         ApplySelectedMedia(_selectedMediaService.SelectedMedia);
+    }
+    
+    private void OnMediaOpened(object? sender, EventArgs e)
+    {
+        _timelineService.DurationSeconds = _mediaBackend.Duration.TotalSeconds;
+        _timelineService.PositionSeconds = _mediaBackend.Position.TotalSeconds;
+        _timelineService.IsPlaying = _mediaBackend.IsPlaying;
+
+        IsLoading = false;
+        PlayerStatusText = "Medio cargado";
+    }
+
+    private void OnMediaFailed(object? sender, string message)
+    {
+        _timelineService.Reset();
+        IsLoading = false;
+        PlayerStatusText = $"Error: {message}";
+    }
+
+    private void OnBackendPositionChanged(object? sender, TimeSpan position)
+    {
+        _timelineService.PositionSeconds = position.TotalSeconds;
     }
 
     public string BackendStatus
@@ -60,38 +96,68 @@ public class MediaPlayerViewModel : ViewModelBase
     public string CurrentMediaTitle
     {
         get => _currentMediaTitle;
-        set => SetProperty(ref _currentMediaTitle, value);
+        set
+        {
+            if (_currentMediaTitle == value)
+                return;
+
+            _currentMediaTitle = value;
+            OnPropertyChanged();
+        }
     }
 
     public string CurrentMediaPath
     {
         get => _currentMediaPath;
-        set => SetProperty(ref _currentMediaPath, value);
+        set
+        {
+            if (_currentMediaPath == value)
+                return;
+
+            _currentMediaPath = value;
+            OnPropertyChanged();
+        }
     }
 
     public string CurrentMediaType
     {
         get => _currentMediaType;
-        set => SetProperty(ref _currentMediaType, value);
+        set
+        {
+            if (_currentMediaType == value)
+                return;
+
+            _currentMediaType = value;
+            OnPropertyChanged();
+        }
     }
 
     public bool HasSelectedMedia
     {
         get => _hasSelectedMedia;
-        set => SetProperty(ref _hasSelectedMedia, value);
+        set
+        {
+            if (_hasSelectedMedia == value)
+                return;
+
+            _hasSelectedMedia = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(HasNoSelectedMedia));
+        }
     }
 
     public bool HasNoSelectedMedia => !HasSelectedMedia;
-
+    
     public bool IsLoading
     {
         get => _isLoading;
         set
         {
-            if (SetProperty(ref _isLoading, value))
-            {
-                OnPropertyChanged(nameof(IsNotLoading));
-            }
+            if (_isLoading == value)
+                return;
+
+            _isLoading = value;
+            OnPropertyChanged();
         }
     }
     
@@ -100,7 +166,14 @@ public class MediaPlayerViewModel : ViewModelBase
     public string PlayerStatusText
     {
         get => _playerStatusText;
-        set => SetProperty(ref _playerStatusText, value);
+        set
+        {
+            if (_playerStatusText == value)
+                return;
+
+            _playerStatusText = value;
+            OnPropertyChanged();
+        }
     }
 
     public double PositionSeconds => _timelineService.PositionSeconds;
@@ -125,7 +198,7 @@ public class MediaPlayerViewModel : ViewModelBase
             CurrentMediaType = "Sin tipo";
             IsLoading = false;
             PlayerStatusText = "Sin reproducción activa";
-            OnPropertyChanged(nameof(HasNoSelectedMedia));
+            _timelineService.Reset();
             return;
         }
 
@@ -135,7 +208,26 @@ public class MediaPlayerViewModel : ViewModelBase
         CurrentMediaType = media.MediaType.ToString();
         IsLoading = true;
         PlayerStatusText = "Cargando medio...";
-        OnPropertyChanged(nameof(HasNoSelectedMedia));
+
+        try
+        {
+            _mediaBackend.Load(media.FilePath);
+
+            _timelineService.DurationSeconds = _mediaBackend.Duration.TotalSeconds;
+            _timelineService.PositionSeconds = _mediaBackend.Position.TotalSeconds;
+            _timelineService.IsPlaying = _mediaBackend.IsPlaying;
+
+            IsLoading = false;
+            PlayerStatusText = "Medio cargado";
+        }
+        catch (Exception ex)
+        {
+            _timelineService.Reset();
+            IsLoading = false;
+            PlayerStatusText = $"Error al cargar: {ex.Message}";
+        }
+        
+        StartPlaybackLoop();
     }
     
     public string NativeHostDebugText
@@ -147,5 +239,21 @@ public class MediaPlayerViewModel : ViewModelBase
     public void SetNativeHostDebugInfo(string descriptor, nint handle)
     {
         NativeHostDebugText = $"Host nativo listo: {descriptor} | Handle: {handle}";
+    }
+    
+    private async void StartPlaybackLoop()
+    {
+        while (true)
+        {
+            await Task.Delay(200);
+
+            _mediaBackend.UpdateState();
+
+            _timelineService.PositionSeconds = _mediaBackend.Position.TotalSeconds;
+            _timelineService.DurationSeconds = _mediaBackend.Duration.TotalSeconds;
+
+            OnPropertyChanged(nameof(PositionSeconds));
+            OnPropertyChanged(nameof(DurationSeconds));
+        }
     }
 }

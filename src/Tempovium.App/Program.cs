@@ -8,6 +8,8 @@ using Tempovium.Infrastructure.DependencyInjection;
 using Tempovium.Infrastructure.Persistence;
 using Tempovium.Services;
 using Tempovium.ViewModels;
+using Tempovium.Media.Abstractions.Contracts;
+using Tempovium.Media.Mac.Backends;
 
 namespace Tempovium;
 
@@ -18,11 +20,6 @@ internal class Program
     [STAThread]
     public static void Main(string[] args)
     {
-        if (OperatingSystem.IsMacOS())
-        {
-            Environment.SetEnvironmentVariable("DYLD_LIBRARY_PATH", "/opt/homebrew/lib");
-            Environment.SetEnvironmentVariable("DYLD_FALLBACK_LIBRARY_PATH", "/opt/homebrew/lib");
-        }
 
         AppHost = Host.CreateDefaultBuilder(args)
             .ConfigureServices((context, services) =>
@@ -33,18 +30,12 @@ internal class Program
                 services.AddSingleton<UserSessionService>();
                 services.AddSingleton<NavigationService>();
                 services.AddSingleton<SelectedMediaService>();
+                
+                services.AddSingleton<IMediaBackend, MacMediaBackend>();
 
                 // Timeline / control de reproducción
                 services.AddSingleton<PlaybackTimelineService>();
                 services.AddSingleton<PlaybackControlService>();
-                services.AddSingleton<FakePlaybackDriverService>();
-
-                // Backend externo neutralizado; el player real embebido
-                // vive actualmente en MediaPlayerView.
-                services.AddSingleton<IPlaybackService, NullPlaybackService>();
-
-                // Se conserva por compatibilidad / experimentación previa
-                services.AddSingleton<MpvProcessService>();
 
                 // ViewModels persistentes
                 services.AddSingleton<MainWindowViewModel>();
@@ -53,6 +44,9 @@ internal class Program
 
                 // ViewModels de navegación
                 services.AddTransient<LoginViewModel>();
+                services.AddTransient<LibraryViewModel>();
+                
+                services.AddSingleton<MediaPlayerViewModel>();
                 services.AddTransient<LibraryViewModel>();
             })
             .Build();
