@@ -1,7 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Tempovium.ViewModels"
-             xmlns:mpv="using:LibMPVSharp.Avalonia"
              xmlns:converters="using:Tempovium.Converters"
              x:Class="Tempovium.Controls.MediaPlayerView"
              x:DataType="vm:MediaPlayerViewModel">
@@ -37,10 +36,6 @@
               MinHeight="300">
 
         <Grid>
-          <mpv:VideoView x:Name="VideoPlayer"
-                         IsVisible="{Binding IsNotLoading}"
-                         HorizontalAlignment="Stretch"
-                         VerticalAlignment="Stretch"/>
 
           <StackPanel IsVisible="{Binding IsLoading}"
                       VerticalAlignment="Center"

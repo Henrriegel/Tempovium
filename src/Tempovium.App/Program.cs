@@ -18,11 +18,6 @@ internal class Program
     [STAThread]
     public static void Main(string[] args)
     {
-        if (OperatingSystem.IsMacOS())
-        {
-            Environment.SetEnvironmentVariable("DYLD_LIBRARY_PATH", "/opt/homebrew/lib");
-            Environment.SetEnvironmentVariable("DYLD_FALLBACK_LIBRARY_PATH", "/opt/homebrew/lib");
-        }
 
         AppHost = Host.CreateDefaultBuilder(args)
             .ConfigureServices((context, services) =>
@@ -37,14 +32,6 @@ internal class Program
                 // Timeline / control de reproducción
                 services.AddSingleton<PlaybackTimelineService>();
                 services.AddSingleton<PlaybackControlService>();
-                services.AddSingleton<FakePlaybackDriverService>();
-
-                // Backend externo neutralizado; el player real embebido
-                // vive actualmente en MediaPlayerView.
-                services.AddSingleton<IPlaybackService, NullPlaybackService>();
-
-                // Se conserva por compatibilidad / experimentación previa
-                services.AddSingleton<MpvProcessService>();
 
                 // ViewModels persistentes
                 services.AddSingleton<MainWindowViewModel>();

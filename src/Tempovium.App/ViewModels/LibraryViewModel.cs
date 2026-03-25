@@ -19,8 +19,6 @@ public class LibraryViewModel : ViewModelBase
     private readonly IMediaImportService _mediaImportService;
     private readonly UserSessionService _userSessionService;
     private readonly SelectedMediaService _selectedMediaService;
-    private readonly IPlaybackService _playbackService;
-    private readonly FakePlaybackDriverService _fakePlaybackDriver;
 
     private List<MediaItem> _mediaItems = new();
     private string _statusMessage = string.Empty;
@@ -30,16 +28,12 @@ public class LibraryViewModel : ViewModelBase
         IMediaRepository mediaRepository,
         IMediaImportService mediaImportService,
         UserSessionService userSessionService,
-        SelectedMediaService selectedMediaService,
-        IPlaybackService playbackService,
-        FakePlaybackDriverService fakePlaybackDriver)
+        SelectedMediaService selectedMediaService)
     {
         _mediaRepository = mediaRepository;
         _mediaImportService = mediaImportService;
         _userSessionService = userSessionService;
         _selectedMediaService = selectedMediaService;
-        _playbackService = playbackService;
-        _fakePlaybackDriver = fakePlaybackDriver;
 
         ImportFolderCommand = new SimpleCommand(ExecuteImportFolder);
         _ = LoadLibraryAsync();
