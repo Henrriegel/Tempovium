@@ -14,6 +14,7 @@ public interface IMediaBackend : IDisposable
     void Stop();
     void Seek(TimeSpan position);
     void SetVolume(double volume);
+    void UpdateState();
 
     event EventHandler? MediaOpened;
     event EventHandler? MediaEnded;

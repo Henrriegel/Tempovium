@@ -31,5 +31,6 @@
         <ProjectReference Include="..\Tempovium.Core\Tempovium.Core.csproj" />
         <ProjectReference Include="..\Tempovium.Infrastructure\Tempovium.Infrastructure.csproj" />
         <ProjectReference Include="..\Tempovium.Media.Abstractions\Tempovium.Media.Abstractions.csproj" />
+        <ProjectReference Include="..\Tempovium.Media.Mac\Tempovium.Media.Mac.csproj" />
     </ItemGroup>
 </Project>

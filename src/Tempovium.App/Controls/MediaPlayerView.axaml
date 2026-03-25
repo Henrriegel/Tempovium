@@ -1,83 +1,116 @@
-<UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:Tempovium.ViewModels"
-             xmlns:converters="using:Tempovium.Converters"
-             x:Class="Tempovium.Controls.MediaPlayerView"
-             x:DataType="vm:MediaPlayerViewModel">
+<UserControl
+    x:Class="Tempovium.Controls.MediaPlayerView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:Tempovium.ViewModels"
+    xmlns:mac="clr-namespace:Tempovium.Media.Mac;assembly=Tempovium.Media.Mac"
+    x:DataType="vm:MediaPlayerViewModel">
 
-  <UserControl.Resources>
-    <converters:SecondsToTimestampConverter x:Key="SecondsToTimestampConverter"/>
-  </UserControl.Resources>
+    <Border BorderBrush="White" BorderThickness="1" Padding="12">
+        <StackPanel Spacing="12">
 
-  <Border BorderBrush="Gray"
-          BorderThickness="1"
-          Padding="16"
-          MinHeight="360">
+            <StackPanel Spacing="2">
+                <TextBlock
+                    FontSize="18"
+                    FontWeight="Bold"
+                    Text="{Binding CurrentMediaTitle}" />
 
-    <Grid RowDefinitions="Auto,*,Auto"
-          RowSpacing="12">
+                <TextBlock
+                    Opacity="0.85"
+                    Text="{Binding CurrentMediaPath}"
+                    TextWrapping="Wrap" />
 
-      <!-- Encabezado del reproductor -->
-      <StackPanel Grid.Row="0"
-                  Spacing="4">
-        <TextBlock Text="Panel de reproducción"
-                   FontSize="16"
-                   FontWeight="Bold"/>
+                <TextBlock
+                    Opacity="0.75"
+                    Text="{Binding CurrentMediaType}" />
+            </StackPanel>
 
-        <TextBlock Text="{Binding BackendStatus}"
-                   Opacity="0.7"/>
-      </StackPanel>
+            <TextBlock
+                FontSize="12"
+                Opacity="0.7"
+                Text="{Binding BackendStatus}" />
 
-      <!-- Área de video -->
-      <Border Grid.Row="1"
-              BorderBrush="DarkGray"
-              BorderThickness="1"
-              Background="Black"
-              MinHeight="300">
+            <Border BorderBrush="White" BorderThickness="1" Padding="16">
+                <StackPanel Spacing="12">
+                    <TextBlock
+                        FontSize="16"
+                        FontWeight="Bold"
+                        Text="Panel de reproducción" />
 
-        <Grid>
+                    <Border
+                        Height="320"
+                        BorderBrush="White"
+                        BorderThickness="1"
+                        IsVisible="{Binding HasNoSelectedMedia}">
+                        <Grid>
+                            <TextBlock
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Opacity="0.7"
+                                Text="Selecciona un medio para comenzar." />
+                        </Grid>
+                    </Border>
 
-          <StackPanel IsVisible="{Binding IsLoading}"
-                      VerticalAlignment="Center"
-                      HorizontalAlignment="Center"
-                      Spacing="10">
-            <ProgressBar IsIndeterminate="True"
-                         Width="180"/>
-            <TextBlock Text="Preparando reproductor..."
-                       HorizontalAlignment="Center"
-                       Opacity="0.7"/>
-          </StackPanel>
-        </Grid>
+                    <Border
+                        Height="320"
+                        BorderBrush="White"
+                        BorderThickness="1"
+                        IsVisible="{Binding HasSelectedMedia}">
+                        <Grid>
+                            <mac:MacVideoHost x:Name="NativeVideoHost" />
 
-      </Border>
+                            <Border
+                                Background="#99000000"
+                                IsVisible="{Binding IsLoading}">
+                                <Grid
+                                    RowDefinitions="Auto,Auto"
+                                    RowSpacing="10"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center">
 
-      <!-- Estado + timeline -->
-      <StackPanel Grid.Row="2"
-                  Spacing="8">
-        <TextBlock Text="{Binding PlayerStatusText}"
-                   Opacity="0.7"/>
+                                    <ProgressBar
+                                        Width="220"
+                                        IsIndeterminate="True" />
 
-        <Separator/>
+                                    <TextBlock
+                                        Grid.Row="1"
+                                        HorizontalAlignment="Center"
+                                        Text="{Binding PlayerStatusText}" />
+                                </Grid>
+                            </Border>
+                        </Grid>
+                    </Border>
 
-        <TextBlock Text="Timeline"
-                   FontWeight="SemiBold"/>
+                    <Separator />
 
-        <Slider Minimum="0"
-                Maximum="{Binding DurationSeconds}"
-                Value="{Binding PositionSeconds}"
-                IsEnabled="False"/>
+                    <TextBlock
+                        FontWeight="SemiBold"
+                        Text="{Binding PlayerStatusText}" />
 
-        <Grid ColumnDefinitions="Auto,*,Auto">
-          <TextBlock Text="{Binding PositionSeconds, Converter={StaticResource SecondsToTimestampConverter}}"
-                     Opacity="0.7"/>
+                    <StackPanel Spacing="6">
+                        <TextBlock
+                            FontSize="16"
+                            FontWeight="Bold"
+                            Text="Timeline" />
 
-          <TextBlock Grid.Column="2"
-                     Text="{Binding DurationSeconds, Converter={StaticResource SecondsToTimestampConverter}}"
-                     Opacity="0.7"/>
-        </Grid>
-      </StackPanel>
+                        <Slider
+                            Minimum="0"
+                            Maximum="{Binding DurationSeconds, Mode=OneWay}"
+                            Value="{Binding PositionSeconds, Mode=OneWay}" />
 
-    </Grid>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock
+                                Opacity="0.75"
+                                Text="{Binding PositionSeconds, StringFormat='Posición: {0:F2}s'}" />
 
-  </Border>
+                            <TextBlock
+                                Grid.Column="1"
+                                Opacity="0.75"
+                                Text="{Binding DurationSeconds, StringFormat='Duración: {0:F2}s'}" />
+                        </Grid>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </Border>
 </UserControl>

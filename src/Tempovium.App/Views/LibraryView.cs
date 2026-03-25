@@ -12,4 +12,5 @@ public partial class LibraryView : UserControl
 
         DataContext = Program.AppHost.Services.GetRequiredService<LibraryViewModel>();
     }
+    
 }

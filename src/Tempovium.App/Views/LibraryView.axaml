@@ -98,7 +98,8 @@
             </StackPanel>
 
             <!-- Reproductor -->
-            <controls:MediaPlayerView Grid.Row="1"/>
+            <controls:MediaPlayerView Grid.Row="1"
+                                      DataContext="{Binding MediaPlayerViewModel}"/>
 
             <!-- Notas -->
             <controls:NotesPanelView Grid.Row="2"/>
