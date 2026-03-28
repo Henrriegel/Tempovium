@@ -37,6 +37,7 @@
                         FontWeight="Bold"
                         Text="Panel de reproducción" />
 
+                    <!-- Estado vacío -->
                     <Border
                         Height="320"
                         BorderBrush="White"
@@ -51,11 +52,12 @@
                         </Grid>
                     </Border>
 
+                    <!-- Vista de video -->
                     <Border
                         Height="320"
                         BorderBrush="White"
                         BorderThickness="1"
-                        IsVisible="{Binding HasSelectedMedia}">
+                        IsVisible="{Binding IsVideo}">
                         <Grid>
                             <mac:MacVideoHost x:Name="NativeVideoHost" />
 
@@ -81,6 +83,68 @@
                         </Grid>
                     </Border>
 
+                    <!-- Vista de audio -->
+                    <Border
+                        Height="320"
+                        BorderBrush="White"
+                        BorderThickness="1"
+                        IsVisible="{Binding IsAudio}">
+                        <Grid RowDefinitions="*,Auto,Auto"
+                              Margin="24">
+
+                            <StackPanel
+                                Grid.Row="0"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Spacing="18">
+
+                                <TextBlock
+                                    HorizontalAlignment="Center"
+                                    FontSize="56"
+                                    Text="♪" />
+
+                                <StackPanel
+                                    Orientation="Horizontal"
+                                    HorizontalAlignment="Center"
+                                    Spacing="8">
+
+                                    <Border Width="10" Height="50" Background="White" CornerRadius="5" Opacity="0.85"/>
+                                    <Border Width="10" Height="80" Background="White" CornerRadius="5" Opacity="0.85"/>
+                                    <Border Width="10" Height="35" Background="White" CornerRadius="5" Opacity="0.85"/>
+                                    <Border Width="10" Height="95" Background="White" CornerRadius="5" Opacity="0.85"/>
+                                    <Border Width="10" Height="60" Background="White" CornerRadius="5" Opacity="0.85"/>
+                                    <Border Width="10" Height="90" Background="White" CornerRadius="5" Opacity="0.85"/>
+                                    <Border Width="10" Height="40" Background="White" CornerRadius="5" Opacity="0.85"/>
+                                    <Border Width="10" Height="75" Background="White" CornerRadius="5" Opacity="0.85"/>
+                                    <Border Width="10" Height="55" Background="White" CornerRadius="5" Opacity="0.85"/>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <TextBlock
+                                Grid.Row="1"
+                                HorizontalAlignment="Center"
+                                Margin="0,0,0,12"
+                                Text="{Binding PlayerStatusText}" />
+
+                            <StackPanel
+                                Grid.Row="2"
+                                Orientation="Horizontal"
+                                HorizontalAlignment="Center"
+                                Spacing="12">
+
+                                <Button
+                                    Width="90"
+                                    Content="Play"
+                                    Command="{Binding PlayCommand}" />
+
+                                <Button
+                                    Width="90"
+                                    Content="Pause"
+                                    Command="{Binding PauseCommand}" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
                     <Separator />
 
                     <TextBlock
@@ -94,9 +158,11 @@
                             Text="Timeline" />
 
                         <Slider
+                            x:Name="TimelineSlider"
                             Minimum="0"
                             Maximum="{Binding DurationSeconds, Mode=OneWay}"
-                            Value="{Binding PositionSeconds, Mode=OneWay}" />
+                            Value="{Binding PositionSeconds, Mode=OneWay}"
+                            PointerReleased="OnTimelineSliderPointerReleased" />
 
                         <Grid ColumnDefinitions="*,Auto">
                             <TextBlock

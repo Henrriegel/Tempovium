@@ -12,6 +12,9 @@ final class PlayerContainer: NSObject {
         super.init()
         playerView.player = player
         playerView.controlsStyle = .floating
+
+        player.defaultRate = 1.0
+        player.rate = 0.0
     }
 
     func load(url: URL) {
@@ -20,17 +23,45 @@ final class PlayerContainer: NSObject {
             return
         }
 
+        print("🚨 NUEVA VERSION SIN AUTOPLAY")
+        print("⏮ rate antes de limpiar:", player.rate)
+
+        player.pause()
+        player.rate = 0.0
+        player.replaceCurrentItem(with: nil)
+
         let item = AVPlayerItem(url: url)
         player.replaceCurrentItem(with: item)
-        player.play()
+
+        player.pause()
+        player.rate = 0.0
+
+        player.seek(to: .zero) { [weak self] _ in
+            guard let self else { return }
+
+            self.player.pause()
+            self.player.rate = 0.0
+
+            print("⏹ rate después de cargar:", self.player.rate)
+            print("⏹ time después de cargar:", self.player.currentTime().seconds)
+        }
     }
 
     func play() {
-        player.play()
+        print("▶️ Swift play()")
+
+        player.defaultRate = 1.0
+        player.playImmediately(atRate: 1.0)
+        player.rate = 1.0
+
+        print("▶️ rate tras play():", player.rate)
     }
 
     func pause() {
+        print("⏸ Swift pause()")
         player.pause()
+        player.rate = 0.0
+        print("⏸ rate tras pause():", player.rate)
     }
 }
 
@@ -162,6 +193,13 @@ public func tpv_mac_player_get_state(
 
         let obj = Unmanaged<PlayerContainer>.fromOpaque(pointer).takeUnretainedValue()
 
+        let currentRate = obj.player.rate
+        if currentRate > 1.01 {
+            print("⚠️ corrigiendo rate anómalo:", currentRate)
+            obj.player.rate = 1.0
+            obj.player.defaultRate = 1.0
+        }
+
         let currentTime = obj.player.currentTime().seconds
         let totalTime = obj.player.currentItem?.duration.seconds ?? 0
 
@@ -173,4 +211,27 @@ public func tpv_mac_player_get_state(
 
     position?.pointee = state.0
     duration?.pointee = state.1
+}
+
+@_cdecl("tpv_mac_player_seek")
+public func tpv_mac_player_seek(
+    _ handle: UnsafeMutableRawPointer?,
+    _ seconds: Double
+) {
+    guard let handle else { return }
+
+    let rawValue = UInt(bitPattern: handle)
+
+    runOnMainActorSync {
+        guard let pointer = UnsafeMutableRawPointer(bitPattern: rawValue) else { return }
+
+        let obj = Unmanaged<PlayerContainer>.fromOpaque(pointer).takeUnretainedValue()
+
+        let time = CMTime(seconds: seconds, preferredTimescale: 600)
+        obj.player.seek(
+            to: time,
+            toleranceBefore: .zero,
+            toleranceAfter: .zero
+        )
+    }
 }

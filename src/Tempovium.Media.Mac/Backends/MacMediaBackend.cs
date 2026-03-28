@@ -36,6 +36,7 @@ public sealed class MacMediaBackend : IMediaBackend, IMediaBackendInfo
 
     public void Load(string path)
     {
+        Console.WriteLine($"[MacMediaBackend] Load -> {path}");
         ThrowIfDisposed();
 
         if (string.IsNullOrWhiteSpace(path))
@@ -57,6 +58,9 @@ public sealed class MacMediaBackend : IMediaBackend, IMediaBackendInfo
             return;
         }
 
+        Position = TimeSpan.Zero;
+        Duration = TimeSpan.Zero;
+
         _isLoaded = true;
         _isPlaying = false;
 
@@ -73,7 +77,7 @@ public sealed class MacMediaBackend : IMediaBackend, IMediaBackendInfo
             MediaFailed?.Invoke(this, "No hay medio cargado.");
             return;
         }
-
+        Console.WriteLine("[MacMediaBackend] Play()");
         MacNative.Play(_handle);
         _isPlaying = true;
     }
@@ -103,18 +107,6 @@ public sealed class MacMediaBackend : IMediaBackend, IMediaBackendInfo
         MacNative.Pause(_handle);
         _isPlaying = false;
         PositionChanged?.Invoke(this, TimeSpan.Zero);
-    }
-
-    public void Seek(TimeSpan position)
-    {
-        ThrowIfDisposed();
-
-        if (!_isLoaded)
-        {
-            return;
-        }
-
-        PositionChanged?.Invoke(this, position);
     }
 
     public void SetVolume(double volume)
@@ -154,5 +146,19 @@ public sealed class MacMediaBackend : IMediaBackend, IMediaBackendInfo
 
         Position = TimeSpan.FromSeconds(position);
         Duration = TimeSpan.FromSeconds(duration);
+    }
+    
+    public void Seek(TimeSpan position)
+    {
+        ThrowIfDisposed();
+
+        if (!_isLoaded || _handle == IntPtr.Zero)
+        {
+            return;
+        }
+
+        MacNative.tpv_mac_player_seek(_handle, position.TotalSeconds);
+
+        PositionChanged?.Invoke(this, position);
     }
 }

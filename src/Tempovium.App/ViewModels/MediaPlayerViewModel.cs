@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel;
+using System.Threading;
 using System.Threading.Tasks;
 using Tempovium.Core.Entities;
 using Tempovium.Core.Services;
@@ -12,9 +13,14 @@ namespace Tempovium.ViewModels;
 public class MediaPlayerViewModel : ViewModelBase
 {
     public MacMediaBackend? MacBackend => _mediaBackend as MacMediaBackend;
+
     private readonly SelectedMediaService _selectedMediaService;
     private readonly IMediaBackend _mediaBackend;
     private readonly PlaybackTimelineService _timelineService;
+
+    private CancellationTokenSource? _playbackLoopCts;
+
+    private double _positionSeconds;
 
     private string _backendStatus;
     private string _nativeHostDebugText = "Host nativo aún no inicializado";
@@ -25,6 +31,11 @@ public class MediaPlayerViewModel : ViewModelBase
     private bool _isLoading;
     private string _playerStatusText = "Sin reproducción activa";
 
+    private bool _suspendTimelineSync;
+
+    public LibraryViewModel.SimpleCommand PlayCommand { get; }
+    public LibraryViewModel.SimpleCommand PauseCommand { get; }
+
     public MediaPlayerViewModel(
         SelectedMediaService selectedMediaService,
         IMediaBackend mediaBackend,
@@ -33,6 +44,9 @@ public class MediaPlayerViewModel : ViewModelBase
         _selectedMediaService = selectedMediaService;
         _mediaBackend = mediaBackend;
         _timelineService = timelineService;
+
+        PlayCommand = new LibraryViewModel.SimpleCommand(Play);
+        PauseCommand = new LibraryViewModel.SimpleCommand(Pause);
 
         if (mediaBackend is IMediaBackendInfo backendInfo)
         {
@@ -47,15 +61,8 @@ public class MediaPlayerViewModel : ViewModelBase
 
         _timelineService.PropertyChanged += (_, __) =>
         {
-            OnPropertyChanged(nameof(PositionSeconds));
             OnPropertyChanged(nameof(DurationSeconds));
             OnPropertyChanged(nameof(IsPlaying));
-
-            if (_timelineService.IsPlaying)
-            {
-                IsLoading = false;
-                PlayerStatusText = "Reproduciendo";
-            }
         };
 
         _mediaBackend.MediaOpened += OnMediaOpened;
@@ -64,15 +71,16 @@ public class MediaPlayerViewModel : ViewModelBase
 
         ApplySelectedMedia(_selectedMediaService.SelectedMedia);
     }
-    
+
     private void OnMediaOpened(object? sender, EventArgs e)
     {
         _timelineService.DurationSeconds = _mediaBackend.Duration.TotalSeconds;
         _timelineService.PositionSeconds = _mediaBackend.Position.TotalSeconds;
         _timelineService.IsPlaying = _mediaBackend.IsPlaying;
 
+        PositionSeconds = _mediaBackend.Position.TotalSeconds;
+
         IsLoading = false;
-        PlayerStatusText = "Medio cargado";
     }
 
     private void OnMediaFailed(object? sender, string message)
@@ -84,7 +92,12 @@ public class MediaPlayerViewModel : ViewModelBase
 
     private void OnBackendPositionChanged(object? sender, TimeSpan position)
     {
-        _timelineService.PositionSeconds = position.TotalSeconds;
+        if (_suspendTimelineSync)
+            return;
+
+        var seconds = position.TotalSeconds;
+        _timelineService.PositionSeconds = seconds;
+        PositionSeconds = seconds;
     }
 
     public string BackendStatus
@@ -129,6 +142,10 @@ public class MediaPlayerViewModel : ViewModelBase
 
             _currentMediaType = value;
             OnPropertyChanged();
+            OnPropertyChanged(nameof(IsAudio));
+            OnPropertyChanged(nameof(IsVideo));
+            OnPropertyChanged(nameof(IsNotAudio));
+            OnPropertyChanged(nameof(IsNotVideo));
         }
     }
 
@@ -147,7 +164,16 @@ public class MediaPlayerViewModel : ViewModelBase
     }
 
     public bool HasNoSelectedMedia => !HasSelectedMedia;
-    
+
+    public bool IsAudio =>
+        string.Equals(CurrentMediaType, "Audio", StringComparison.OrdinalIgnoreCase);
+
+    public bool IsVideo =>
+        string.Equals(CurrentMediaType, "Video", StringComparison.OrdinalIgnoreCase);
+
+    public bool IsNotAudio => !IsAudio;
+    public bool IsNotVideo => !IsVideo;
+
     public bool IsLoading
     {
         get => _isLoading;
@@ -160,8 +186,6 @@ public class MediaPlayerViewModel : ViewModelBase
             OnPropertyChanged();
         }
     }
-    
-    public bool IsNotLoading => !IsLoading;
 
     public string PlayerStatusText
     {
@@ -176,7 +200,19 @@ public class MediaPlayerViewModel : ViewModelBase
         }
     }
 
-    public double PositionSeconds => _timelineService.PositionSeconds;
+    public double PositionSeconds
+    {
+        get => _positionSeconds;
+        set
+        {
+            if (Math.Abs(_positionSeconds - value) < 0.01)
+                return;
+
+            _positionSeconds = value;
+            OnPropertyChanged();
+        }
+    }
+
     public double DurationSeconds => _timelineService.DurationSeconds;
     public bool IsPlaying => _timelineService.IsPlaying;
 
@@ -192,6 +228,10 @@ public class MediaPlayerViewModel : ViewModelBase
     {
         if (media is null)
         {
+            _playbackLoopCts?.Cancel();
+            _playbackLoopCts?.Dispose();
+            _playbackLoopCts = null;
+
             HasSelectedMedia = false;
             CurrentMediaTitle = "Ningún medio seleccionado";
             CurrentMediaPath = "Sin ruta";
@@ -199,6 +239,8 @@ public class MediaPlayerViewModel : ViewModelBase
             IsLoading = false;
             PlayerStatusText = "Sin reproducción activa";
             _timelineService.Reset();
+            PositionSeconds = 0;
+            _suspendTimelineSync = false;
             return;
         }
 
@@ -207,18 +249,27 @@ public class MediaPlayerViewModel : ViewModelBase
         CurrentMediaPath = media.FilePath;
         CurrentMediaType = media.MediaType.ToString();
         IsLoading = true;
-        PlayerStatusText = "Cargando medio...";
 
         try
         {
             _mediaBackend.Load(media.FilePath);
 
+            if (string.Equals(media.MediaType.ToString(), "Video", StringComparison.OrdinalIgnoreCase))
+            {
+                _mediaBackend.Play();
+                PlayerStatusText = "Reproduciendo";
+            }
+            else
+            {
+                PlayerStatusText = "Listo para reproducir";
+            }
+
             _timelineService.DurationSeconds = _mediaBackend.Duration.TotalSeconds;
             _timelineService.PositionSeconds = _mediaBackend.Position.TotalSeconds;
             _timelineService.IsPlaying = _mediaBackend.IsPlaying;
 
+            PositionSeconds = _mediaBackend.Position.TotalSeconds;
             IsLoading = false;
-            PlayerStatusText = "Medio cargado";
         }
         catch (Exception ex)
         {
@@ -226,34 +277,110 @@ public class MediaPlayerViewModel : ViewModelBase
             IsLoading = false;
             PlayerStatusText = $"Error al cargar: {ex.Message}";
         }
-        
-        StartPlaybackLoop();
+
+        RestartPlaybackLoop();
     }
-    
+
     public string NativeHostDebugText
     {
         get => _nativeHostDebugText;
         set => SetProperty(ref _nativeHostDebugText, value);
     }
-    
+
     public void SetNativeHostDebugInfo(string descriptor, nint handle)
     {
         NativeHostDebugText = $"Host nativo listo: {descriptor} | Handle: {handle}";
     }
-    
-    private async void StartPlaybackLoop()
+
+    private void RestartPlaybackLoop()
     {
-        while (true)
+        _playbackLoopCts?.Cancel();
+        _playbackLoopCts?.Dispose();
+
+        _playbackLoopCts = new CancellationTokenSource();
+        _ = StartPlaybackLoopAsync(_playbackLoopCts.Token);
+    }
+
+    private async Task StartPlaybackLoopAsync(CancellationToken cancellationToken)
+    {
+        try
         {
-            await Task.Delay(200);
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                await Task.Delay(200, cancellationToken);
 
-            _mediaBackend.UpdateState();
+                _mediaBackend.UpdateState();
 
-            _timelineService.PositionSeconds = _mediaBackend.Position.TotalSeconds;
-            _timelineService.DurationSeconds = _mediaBackend.Duration.TotalSeconds;
+                var backendPosition = _mediaBackend.Position.TotalSeconds;
+                var backendDuration = _mediaBackend.Duration.TotalSeconds;
 
-            OnPropertyChanged(nameof(PositionSeconds));
-            OnPropertyChanged(nameof(DurationSeconds));
+                _timelineService.DurationSeconds = backendDuration;
+
+                if (!_suspendTimelineSync)
+                {
+                    _timelineService.PositionSeconds = backendPosition;
+                    PositionSeconds = backendPosition;
+                }
+
+                OnPropertyChanged(nameof(DurationSeconds));
+                OnPropertyChanged(nameof(IsPlaying));
+            }
         }
+        catch (TaskCanceledException)
+        {
+        }
+    }
+
+    public async Task SeekToAsync(double seconds)
+    {
+        if (seconds < 0)
+            seconds = 0;
+
+        _mediaBackend.Seek(TimeSpan.FromSeconds(seconds));
+
+        _timelineService.PositionSeconds = seconds;
+        PositionSeconds = seconds;
+
+        await Task.Delay(500);
+
+        _mediaBackend.UpdateState();
+
+        _timelineService.PositionSeconds = _mediaBackend.Position.TotalSeconds;
+        PositionSeconds = _mediaBackend.Position.TotalSeconds;
+
+        _suspendTimelineSync = false;
+    }
+
+    public void Play()
+    {
+        if (!_mediaBackend.IsLoaded)
+            return;
+
+        Console.WriteLine("[MediaPlayerVM] Play() desde UI");
+
+        _mediaBackend.Play();
+        _timelineService.IsPlaying = true;
+        PlayerStatusText = "Reproduciendo";
+
+        OnPropertyChanged(nameof(IsPlaying));
+    }
+
+    public void Pause()
+    {
+        if (!_mediaBackend.IsLoaded)
+            return;
+
+        Console.WriteLine("[MediaPlayerVM] Pause() desde UI");
+
+        _mediaBackend.Pause();
+        _timelineService.IsPlaying = false;
+        PlayerStatusText = "Pausado";
+
+        OnPropertyChanged(nameof(IsPlaying));
+    }
+    
+    public void BeginUserSeek()
+    {
+        _suspendTimelineSync = true;
     }
 }
