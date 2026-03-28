@@ -30,4 +30,10 @@ internal static partial class MacNative
         out double position,
         out double duration
     );
+    
+    [LibraryImport("TempoviumMacBridge")]
+    public static partial void tpv_mac_player_seek(
+        IntPtr handle,
+        double seconds
+    );
 }
