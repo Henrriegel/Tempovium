@@ -37,8 +37,7 @@ public class NotesPanelViewModel : ViewModelBase
     {
         get
         {
-            var time = TimeSpan.FromSeconds(_timelineService.PositionSeconds);
-
+            var time = TimeSpan.FromSeconds(_timelineService.DisplayPositionSeconds);
             var formatted = time.TotalHours >= 1
                 ? time.ToString(@"hh\:mm\:ss", CultureInfo.InvariantCulture)
                 : time.ToString(@"mm\:ss", CultureInfo.InvariantCulture);
@@ -68,7 +67,8 @@ public class NotesPanelViewModel : ViewModelBase
 
         _timelineService.PropertyChanged += (_, e) =>
         {
-            if (e.PropertyName == nameof(PlaybackTimelineService.PositionSeconds))
+            if (e.PropertyName == nameof(PlaybackTimelineService.DisplayPositionSeconds) ||
+                e.PropertyName == nameof(PlaybackTimelineService.PlaybackPositionSeconds))
             {
                 OnPropertyChanged(nameof(AddNoteButtonText));
                 UpdateActiveNote();
@@ -88,7 +88,6 @@ public class NotesPanelViewModel : ViewModelBase
         }
 
         var notes = await _noteRepository.GetNotesForMediaAsync(media.Id);
-
         foreach (var note in notes)
         {
             Notes.Add(new NoteItemViewModel(note));
@@ -100,19 +99,22 @@ public class NotesPanelViewModel : ViewModelBase
     public async Task AddNoteAsync()
     {
         var media = _selectedMediaService.SelectedMedia;
-
         if (media is null)
+        {
             return;
+        }
 
         if (string.IsNullOrWhiteSpace(NewNoteContent))
+        {
             return;
+        }
 
         var note = new MediaNote
         {
             Id = Guid.NewGuid(),
             UserId = media.UserId,
             MediaItemId = media.Id,
-            TimestampSeconds = _timelineService.PositionSeconds,
+            TimestampSeconds = _timelineService.DisplayPositionSeconds,
             Content = NewNoteContent.Trim(),
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = null
@@ -138,21 +140,19 @@ public class NotesPanelViewModel : ViewModelBase
     public void JumpToNote(NoteItemViewModel note)
     {
         if (note == null)
+        {
             return;
+        }
 
-        // Actualizamos de inmediato la UI local
-        _timelineService.PositionSeconds = note.TimestampSeconds;
-
-        // Y ahora sí pedimos al reproductor real que haga seek
         _playbackControlService.RequestSeek(note.TimestampSeconds);
-
-        UpdateActiveNote();
     }
 
     public async Task DeleteNoteAsync(NoteItemViewModel note)
     {
         if (note == null)
+        {
             return;
+        }
 
         await _noteRepository.DeleteNoteAsync(note.Id);
         await _noteRepository.SaveChangesAsync();
@@ -175,8 +175,7 @@ public class NotesPanelViewModel : ViewModelBase
             return;
         }
 
-        var currentTime = _timelineService.PositionSeconds;
-
+        var currentTime = _timelineService.DisplayPositionSeconds;
         NoteItemViewModel? closest = null;
 
         foreach (var note in Notes)

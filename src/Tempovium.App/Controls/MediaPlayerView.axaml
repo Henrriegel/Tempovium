@@ -37,7 +37,6 @@
                         FontWeight="Bold"
                         Text="Panel de reproducción" />
 
-                    <!-- Estado vacío -->
                     <Border
                         Height="320"
                         BorderBrush="White"
@@ -52,14 +51,15 @@
                         </Grid>
                     </Border>
 
-                    <!-- Vista de video -->
                     <Border
                         Height="320"
                         BorderBrush="White"
                         BorderThickness="1"
                         IsVisible="{Binding IsVideo}">
                         <Grid>
-                            <mac:MacVideoHost x:Name="NativeVideoHost" />
+                            <mac:MacVideoHost
+                                x:Name="NativeVideoHost"
+                                Backend="{Binding MacBackend}" />
 
                             <Border
                                 Background="#99000000"
@@ -83,53 +83,60 @@
                         </Grid>
                     </Border>
 
-                    <!-- Vista de audio -->
                     <Border
-                        Height="320"
+                        Height="360"
                         BorderBrush="White"
                         BorderThickness="1"
                         IsVisible="{Binding IsAudio}">
-                        <Grid RowDefinitions="*,Auto,Auto"
-                              Margin="24">
+                        <Grid
+                            Margin="20"
+                            RowDefinitions="Auto,Auto,Auto,*,Auto"
+                            RowSpacing="16">
 
-                            <StackPanel
+                            <TextBlock
                                 Grid.Row="0"
                                 HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Spacing="18">
+                                Margin="0,6,0,0"
+                                FontSize="56"
+                                Text="♪" />
 
-                                <TextBlock
-                                    HorizontalAlignment="Center"
-                                    FontSize="56"
-                                    Text="♪" />
-
+                            <Border
+                                Grid.Row="1"
+                                Width="340"
+                                Height="110"
+                                HorizontalAlignment="Center"
+                                Padding="18,14"
+                                CornerRadius="18"
+                                BorderBrush="#55FFFFFF"
+                                BorderThickness="1">
                                 <StackPanel
                                     Orientation="Horizontal"
                                     HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
                                     Spacing="8">
 
-                                    <Border Width="10" Height="50" Background="White" CornerRadius="5" Opacity="0.85"/>
-                                    <Border Width="10" Height="80" Background="White" CornerRadius="5" Opacity="0.85"/>
-                                    <Border Width="10" Height="35" Background="White" CornerRadius="5" Opacity="0.85"/>
-                                    <Border Width="10" Height="95" Background="White" CornerRadius="5" Opacity="0.85"/>
-                                    <Border Width="10" Height="60" Background="White" CornerRadius="5" Opacity="0.85"/>
-                                    <Border Width="10" Height="90" Background="White" CornerRadius="5" Opacity="0.85"/>
-                                    <Border Width="10" Height="40" Background="White" CornerRadius="5" Opacity="0.85"/>
-                                    <Border Width="10" Height="75" Background="White" CornerRadius="5" Opacity="0.85"/>
-                                    <Border Width="10" Height="55" Background="White" CornerRadius="5" Opacity="0.85"/>
+                                    <Border Width="12" Height="44" Background="White" CornerRadius="12" Opacity="0.85"/>
+                                    <Border Width="12" Height="68" Background="White" CornerRadius="12" Opacity="0.85"/>
+                                    <Border Width="12" Height="34" Background="White" CornerRadius="12" Opacity="0.85"/>
+                                    <Border Width="12" Height="82" Background="White" CornerRadius="12" Opacity="0.85"/>
+                                    <Border Width="12" Height="56" Background="White" CornerRadius="12" Opacity="0.85"/>
+                                    <Border Width="12" Height="78" Background="White" CornerRadius="12" Opacity="0.85"/>
+                                    <Border Width="12" Height="40" Background="White" CornerRadius="12" Opacity="0.85"/>
+                                    <Border Width="12" Height="64" Background="White" CornerRadius="12" Opacity="0.85"/>
+                                    <Border Width="12" Height="50" Background="White" CornerRadius="12" Opacity="0.85"/>
                                 </StackPanel>
-                            </StackPanel>
+                            </Border>
 
                             <TextBlock
-                                Grid.Row="1"
+                                Grid.Row="2"
                                 HorizontalAlignment="Center"
-                                Margin="0,0,0,12"
                                 Text="{Binding PlayerStatusText}" />
 
                             <StackPanel
-                                Grid.Row="2"
+                                Grid.Row="3"
                                 Orientation="Horizontal"
                                 HorizontalAlignment="Center"
+                                VerticalAlignment="Top"
                                 Spacing="12">
 
                                 <Button
@@ -142,39 +149,71 @@
                                     Content="Pause"
                                     Command="{Binding PauseCommand}" />
                             </StackPanel>
+
+                            <Border
+                                Grid.Row="4"
+                                Margin="0,4,0,0"
+                                Padding="0,10,0,0">
+                                <Grid
+                                    RowDefinitions="Auto,Auto"
+                                    RowSpacing="10">
+
+                                    <TextBlock
+                                        Grid.Row="0"
+                                        HorizontalAlignment="Center"
+                                        FontSize="16"
+                                        FontWeight="Bold"
+                                        Text="Timeline" />
+
+                                    <Grid
+                                        Grid.Row="1"
+                                        ColumnDefinitions="Auto,Auto,*,Auto"
+                                        ColumnSpacing="12"
+                                        VerticalAlignment="Center">
+
+                                        <Button
+                                            Width="90"
+                                            Content="Play"
+                                            Command="{Binding PlayCommand}"
+                                            IsVisible="{Binding IsPaused}"
+                                            VerticalAlignment="Center" />
+
+                                        <Button
+                                            Width="90"
+                                            Content="Pause"
+                                            Command="{Binding PauseCommand}"
+                                            IsVisible="{Binding IsPlaying}"
+                                            VerticalAlignment="Center" />
+
+                                        <TextBlock
+                                            Grid.Column="1"
+                                            MinWidth="95"
+                                            VerticalAlignment="Center"
+                                            HorizontalAlignment="Left"
+                                            Opacity="0.75"
+                                            Text="{Binding PositionSeconds, StringFormat='Posición: {0:F2}s'}" />
+
+                                        <Slider
+                                            x:Name="TimelineSlider"
+                                            Grid.Column="2"
+                                            Minimum="0"
+                                            Maximum="{Binding DurationSeconds, Mode=OneWay}"
+                                            Value="{Binding PositionSeconds, Mode=OneWay}"
+                                            PointerReleased="OnTimelineSliderPointerReleased"
+                                            VerticalAlignment="Center" />
+
+                                        <TextBlock
+                                            Grid.Column="3"
+                                            MinWidth="110"
+                                            VerticalAlignment="Center"
+                                            HorizontalAlignment="Right"
+                                            Opacity="0.75"
+                                            Text="{Binding DurationSeconds, StringFormat='Duración: {0:F2}s'}" />
+                                    </Grid>
+                                </Grid>
+                            </Border>
                         </Grid>
                     </Border>
-
-                    <Separator />
-
-                    <TextBlock
-                        FontWeight="SemiBold"
-                        Text="{Binding PlayerStatusText}" />
-
-                    <StackPanel Spacing="6">
-                        <TextBlock
-                            FontSize="16"
-                            FontWeight="Bold"
-                            Text="Timeline" />
-
-                        <Slider
-                            x:Name="TimelineSlider"
-                            Minimum="0"
-                            Maximum="{Binding DurationSeconds, Mode=OneWay}"
-                            Value="{Binding PositionSeconds, Mode=OneWay}"
-                            PointerReleased="OnTimelineSliderPointerReleased" />
-
-                        <Grid ColumnDefinitions="*,Auto">
-                            <TextBlock
-                                Opacity="0.75"
-                                Text="{Binding PositionSeconds, StringFormat='Posición: {0:F2}s'}" />
-
-                            <TextBlock
-                                Grid.Column="1"
-                                Opacity="0.75"
-                                Text="{Binding DurationSeconds, StringFormat='Duración: {0:F2}s'}" />
-                        </Grid>
-                    </StackPanel>
                 </StackPanel>
             </Border>
         </StackPanel>

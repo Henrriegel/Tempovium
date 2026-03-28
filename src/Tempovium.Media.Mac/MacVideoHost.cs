@@ -22,8 +22,28 @@ public sealed class MacVideoHost : NativeControlHost
 
         if (change.Property == BackendProperty)
         {
+            InvalidateMeasure();
+            InvalidateArrange();
             InvalidateVisual();
         }
+    }
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+
+        InvalidateMeasure();
+        InvalidateArrange();
+        InvalidateVisual();
+    }
+
+    protected override Size ArrangeOverride(Size finalSize)
+    {
+        var arranged = base.ArrangeOverride(finalSize);
+
+        InvalidateVisual();
+
+        return arranged;
     }
 
     protected override IPlatformHandle CreateNativeControlCore(IPlatformHandle parent)
@@ -34,7 +54,6 @@ public sealed class MacVideoHost : NativeControlHost
         }
 
         var viewHandle = Backend.GetNativeViewHandle();
-
         if (viewHandle == 0)
         {
             return base.CreateNativeControlCore(parent);

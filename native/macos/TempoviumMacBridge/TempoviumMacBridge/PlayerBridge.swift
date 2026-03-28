@@ -8,10 +8,17 @@ final class PlayerContainer: NSObject {
     let player = AVPlayer()
     let playerView = AVPlayerView()
 
+    private var statusObservation: NSKeyValueObservation?
+    private var isReadyToPlay = false
+
+    // Estado para estabilizar el seek y evitar que C# lea una posición vieja.
+    private var pendingSeekSeconds: Double?
+    private let seekSettleToleranceSeconds: Double = 0.35
+
     override init() {
         super.init()
         playerView.player = player
-        playerView.controlsStyle = .floating
+        playerView.controlsStyle = .inline
 
         player.defaultRate = 1.0
         player.rate = 0.0
@@ -23,14 +30,38 @@ final class PlayerContainer: NSObject {
             return
         }
 
-        print("🚨 NUEVA VERSION SIN AUTOPLAY")
-        print("⏮ rate antes de limpiar:", player.rate)
+        statusObservation?.invalidate()
+        statusObservation = nil
+        isReadyToPlay = false
+        pendingSeekSeconds = nil
 
         player.pause()
         player.rate = 0.0
         player.replaceCurrentItem(with: nil)
 
         let item = AVPlayerItem(url: url)
+
+        statusObservation = item.observe(\.status, options: [.initial, .new]) { [weak self] observedItem, _ in
+            guard let self else { return }
+
+            Task { @MainActor in
+                switch observedItem.status {
+                case .readyToPlay:
+                    self.isReadyToPlay = true
+                    print("✅ Item listo para reproducir")
+                case .failed:
+                    self.isReadyToPlay = false
+                    print("❌ Item falló al cargar:", observedItem.error?.localizedDescription ?? "sin detalle")
+                case .unknown:
+                    self.isReadyToPlay = false
+                    print("⏳ Item aún no listo")
+                @unknown default:
+                    self.isReadyToPlay = false
+                    print("⚠️ Estado desconocido del item")
+                }
+            }
+        }
+
         player.replaceCurrentItem(with: item)
 
         player.pause()
@@ -39,11 +70,14 @@ final class PlayerContainer: NSObject {
         player.seek(to: .zero) { [weak self] _ in
             guard let self else { return }
 
-            self.player.pause()
-            self.player.rate = 0.0
+            Task { @MainActor in
+                self.player.pause()
+                self.player.rate = 0.0
+                self.pendingSeekSeconds = nil
 
-            print("⏹ rate después de cargar:", self.player.rate)
-            print("⏹ time después de cargar:", self.player.currentTime().seconds)
+                print("⏹ rate después de cargar:", self.player.rate)
+                print("⏹ time después de cargar:", self.player.currentTime().seconds)
+            }
         }
     }
 
@@ -62,6 +96,62 @@ final class PlayerContainer: NSObject {
         player.pause()
         player.rate = 0.0
         print("⏸ rate tras pause():", player.rate)
+    }
+
+    func getState() -> (Double, Double, Int32) {
+        let currentRate = player.rate
+        if currentRate > 1.01 {
+            print("⚠️ corrigiendo rate anómalo:", currentRate)
+            player.rate = 1.0
+            player.defaultRate = 1.0
+        }
+
+        let rawCurrentTime = player.currentTime().seconds
+        let rawTotalTime = player.currentItem?.duration.seconds ?? 0
+
+        let safeCurrentTime = rawCurrentTime.isFinite ? rawCurrentTime : 0
+        let safeDuration = rawTotalTime.isFinite ? rawTotalTime : 0
+
+        var effectivePosition = safeCurrentTime
+
+        if let target = pendingSeekSeconds {
+            if abs(safeCurrentTime - target) <= seekSettleToleranceSeconds {
+                pendingSeekSeconds = nil
+                effectivePosition = safeCurrentTime
+            } else {
+                // Mientras el seek no se asiente, reportamos el target
+                // para que la UI no "rebote" al segundo viejo.
+                effectivePosition = target
+            }
+        }
+
+        let ready = isReadyToPlay ? Int32(1) : Int32(0)
+        return (effectivePosition, safeDuration, ready)
+    }
+
+    func seek(to seconds: Double) {
+        let clampedTarget = max(0, seconds)
+        pendingSeekSeconds = clampedTarget
+
+        let time = CMTime(seconds: clampedTarget, preferredTimescale: 600)
+        player.seek(
+            to: time,
+            toleranceBefore: .zero,
+            toleranceAfter: .zero
+        ) { [weak self] finished in
+            guard let self else { return }
+            guard finished else { return }
+
+            Task { @MainActor in
+                let actual = self.player.currentTime().seconds
+                let safeActual = actual.isFinite ? actual : 0
+
+                if let target = self.pendingSeekSeconds,
+                   abs(safeActual - target) <= self.seekSettleToleranceSeconds {
+                    self.pendingSeekSeconds = nil
+                }
+            }
+        }
     }
 }
 
@@ -176,41 +266,30 @@ public func tpv_mac_player_get_view(_ handle: UnsafeMutableRawPointer?) -> Unsaf
 public func tpv_mac_player_get_state(
     _ handle: UnsafeMutableRawPointer?,
     _ position: UnsafeMutablePointer<Double>?,
-    _ duration: UnsafeMutablePointer<Double>?
+    _ duration: UnsafeMutablePointer<Double>?,
+    _ isReady: UnsafeMutablePointer<Int32>?
 ) {
     guard let handle else {
         position?.pointee = 0
         duration?.pointee = 0
+        isReady?.pointee = 0
         return
     }
 
     let rawValue = UInt(bitPattern: handle)
 
-    let state: (Double, Double) = runOnMainActorSync {
+    let state: (Double, Double, Int32) = runOnMainActorSync {
         guard let pointer = UnsafeMutableRawPointer(bitPattern: rawValue) else {
-            return (0, 0)
+            return (0, 0, 0)
         }
 
         let obj = Unmanaged<PlayerContainer>.fromOpaque(pointer).takeUnretainedValue()
-
-        let currentRate = obj.player.rate
-        if currentRate > 1.01 {
-            print("⚠️ corrigiendo rate anómalo:", currentRate)
-            obj.player.rate = 1.0
-            obj.player.defaultRate = 1.0
-        }
-
-        let currentTime = obj.player.currentTime().seconds
-        let totalTime = obj.player.currentItem?.duration.seconds ?? 0
-
-        let safePosition = currentTime.isFinite ? currentTime : 0
-        let safeDuration = totalTime.isFinite ? totalTime : 0
-
-        return (safePosition, safeDuration)
+        return obj.getState()
     }
 
     position?.pointee = state.0
     duration?.pointee = state.1
+    isReady?.pointee = state.2
 }
 
 @_cdecl("tpv_mac_player_seek")
@@ -226,12 +305,6 @@ public func tpv_mac_player_seek(
         guard let pointer = UnsafeMutableRawPointer(bitPattern: rawValue) else { return }
 
         let obj = Unmanaged<PlayerContainer>.fromOpaque(pointer).takeUnretainedValue()
-
-        let time = CMTime(seconds: seconds, preferredTimescale: 600)
-        obj.player.seek(
-            to: time,
-            toleranceBefore: .zero,
-            toleranceAfter: .zero
-        )
+        obj.seek(to: seconds)
     }
 }
