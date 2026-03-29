@@ -3,20 +3,23 @@ import AppKit
 import AVKit
 import AVFoundation
 
-@MainActor
 final class PlayerContainer: NSObject {
-    let player = AVPlayer()
-    let playerView = AVPlayerView()
+    let player: AVPlayer
+    let playerView: AVPlayerView
 
     private var statusObservation: NSKeyValueObservation?
     private var isReadyToPlay = false
 
-    // Estado para estabilizar el seek y evitar que C# lea una posición vieja.
     private var pendingSeekSeconds: Double?
     private let seekSettleToleranceSeconds: Double = 0.35
 
+    @MainActor
     override init() {
+        player = AVPlayer()
+        playerView = AVPlayerView()
+
         super.init()
+
         playerView.player = player
         playerView.controlsStyle = .inline
 
@@ -24,11 +27,14 @@ final class PlayerContainer: NSObject {
         player.rate = 0.0
     }
 
+    @MainActor
     func load(url: URL) {
         if !FileManager.default.fileExists(atPath: url.path) {
             print("❌ Archivo no existe:", url.path)
             return
         }
+
+        print("📂 Cargando archivo:", url.path)
 
         statusObservation?.invalidate()
         statusObservation = nil
@@ -40,23 +46,28 @@ final class PlayerContainer: NSObject {
         player.replaceCurrentItem(with: nil)
 
         let item = AVPlayerItem(url: url)
+        let selfRawValue = UInt(bitPattern: Unmanaged.passUnretained(self).toOpaque())
 
-        statusObservation = item.observe(\.status, options: [.initial, .new]) { [weak self] observedItem, _ in
-            guard let self else { return }
+        statusObservation = item.observe(\.status, options: [.initial, .new]) { observedItem, _ in
+            DispatchQueue.main.async {
+                guard let pointer = UnsafeMutableRawPointer(bitPattern: selfRawValue) else { return }
 
-            Task { @MainActor in
+                let owner = Unmanaged<PlayerContainer>
+                    .fromOpaque(pointer)
+                    .takeUnretainedValue()
+
                 switch observedItem.status {
                 case .readyToPlay:
-                    self.isReadyToPlay = true
+                    owner.isReadyToPlay = true
                     print("✅ Item listo para reproducir")
                 case .failed:
-                    self.isReadyToPlay = false
+                    owner.isReadyToPlay = false
                     print("❌ Item falló al cargar:", observedItem.error?.localizedDescription ?? "sin detalle")
                 case .unknown:
-                    self.isReadyToPlay = false
+                    owner.isReadyToPlay = false
                     print("⏳ Item aún no listo")
                 @unknown default:
-                    self.isReadyToPlay = false
+                    owner.isReadyToPlay = false
                     print("⚠️ Estado desconocido del item")
                 }
             }
@@ -67,20 +78,25 @@ final class PlayerContainer: NSObject {
         player.pause()
         player.rate = 0.0
 
-        player.seek(to: .zero) { [weak self] _ in
-            guard let self else { return }
+        player.seek(to: .zero) { _ in
+            DispatchQueue.main.async {
+                guard let pointer = UnsafeMutableRawPointer(bitPattern: selfRawValue) else { return }
 
-            Task { @MainActor in
-                self.player.pause()
-                self.player.rate = 0.0
-                self.pendingSeekSeconds = nil
+                let owner = Unmanaged<PlayerContainer>
+                    .fromOpaque(pointer)
+                    .takeUnretainedValue()
 
-                print("⏹ rate después de cargar:", self.player.rate)
-                print("⏹ time después de cargar:", self.player.currentTime().seconds)
+                owner.player.pause()
+                owner.player.rate = 0.0
+                owner.pendingSeekSeconds = nil
+
+                print("⏹ rate después de cargar:", owner.player.rate)
+                print("⏹ time después de cargar:", owner.player.currentTime().seconds)
             }
         }
     }
 
+    @MainActor
     func play() {
         print("▶️ Swift play()")
 
@@ -91,6 +107,7 @@ final class PlayerContainer: NSObject {
         print("▶️ rate tras play():", player.rate)
     }
 
+    @MainActor
     func pause() {
         print("⏸ Swift pause()")
         player.pause()
@@ -98,6 +115,7 @@ final class PlayerContainer: NSObject {
         print("⏸ rate tras pause():", player.rate)
     }
 
+    @MainActor
     func getState() -> (Double, Double, Int32) {
         let currentRate = player.rate
         if currentRate > 1.01 {
@@ -106,49 +124,58 @@ final class PlayerContainer: NSObject {
             player.defaultRate = 1.0
         }
 
-        let rawCurrentTime = player.currentTime().seconds
-        let rawTotalTime = player.currentItem?.duration.seconds ?? 0
+        let currentTime = player.currentTime().seconds
+        let totalTime = player.currentItem?.duration.seconds ?? 0
 
-        let safeCurrentTime = rawCurrentTime.isFinite ? rawCurrentTime : 0
-        let safeDuration = rawTotalTime.isFinite ? rawTotalTime : 0
+        let safePosition = currentTime.isFinite ? currentTime : 0
+        let safeDuration = totalTime.isFinite ? totalTime : 0
 
-        var effectivePosition = safeCurrentTime
+        var effectivePosition = safePosition
 
         if let target = pendingSeekSeconds {
-            if abs(safeCurrentTime - target) <= seekSettleToleranceSeconds {
+            if abs(safePosition - target) <= seekSettleToleranceSeconds {
                 pendingSeekSeconds = nil
-                effectivePosition = safeCurrentTime
+                effectivePosition = safePosition
             } else {
-                // Mientras el seek no se asiente, reportamos el target
-                // para que la UI no "rebote" al segundo viejo.
                 effectivePosition = target
             }
         }
 
         let ready = isReadyToPlay ? Int32(1) : Int32(0)
+        print("[SwiftBridge] getState -> current=\(safePosition), effective=\(effectivePosition), duration=\(safeDuration), pending=\(String(describing: pendingSeekSeconds)), ready=\(isReadyToPlay)")
         return (effectivePosition, safeDuration, ready)
     }
 
+    @MainActor
     func seek(to seconds: Double) {
-        let clampedTarget = max(0, seconds)
-        pendingSeekSeconds = clampedTarget
+        let clampedSeconds = max(0, seconds)
+        pendingSeekSeconds = clampedSeconds
+        print("[SwiftBridge] seek -> requested=\(seconds), clamped=\(clampedSeconds)")
 
-        let time = CMTime(seconds: clampedTarget, preferredTimescale: 600)
+        let time = CMTime(seconds: clampedSeconds, preferredTimescale: 600)
+        let selfRawValue = UInt(bitPattern: Unmanaged.passUnretained(self).toOpaque())
+
         player.seek(
             to: time,
             toleranceBefore: .zero,
             toleranceAfter: .zero
-        ) { [weak self] finished in
-            guard let self else { return }
-            guard finished else { return }
+        ) { finished in
+            DispatchQueue.main.async {
+                guard let pointer = UnsafeMutableRawPointer(bitPattern: selfRawValue) else { return }
 
-            Task { @MainActor in
-                let actual = self.player.currentTime().seconds
+                let owner = Unmanaged<PlayerContainer>
+                    .fromOpaque(pointer)
+                    .takeUnretainedValue()
+
+                guard finished else { return }
+
+                let actual = owner.player.currentTime().seconds
                 let safeActual = actual.isFinite ? actual : 0
 
-                if let target = self.pendingSeekSeconds,
-                   abs(safeActual - target) <= self.seekSettleToleranceSeconds {
-                    self.pendingSeekSeconds = nil
+                print("[SwiftBridge] seek completion -> finished=\(finished), actual=\(safeActual), pending=\(String(describing: owner.pendingSeekSeconds))")
+                if let target = owner.pendingSeekSeconds,
+                   abs(safeActual - target) <= owner.seekSettleToleranceSeconds {
+                    owner.pendingSeekSeconds = nil
                 }
             }
         }
@@ -201,8 +228,6 @@ public func tpv_mac_player_load_file(
 
     let rawValue = UInt(bitPattern: handle)
     let stringPath = String(cString: path)
-
-    print("📂 Cargando archivo:", stringPath)
 
     return runOnMainActorSync {
         guard let pointer = UnsafeMutableRawPointer(bitPattern: rawValue) else { return 0 }

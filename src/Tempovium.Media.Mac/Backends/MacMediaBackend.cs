@@ -97,6 +97,7 @@ public sealed class MacMediaBackend : IMediaBackend, IMediaBackendInfo
             return;
         }
 
+        Console.WriteLine("[MacMediaBackend] Pause()");
         MacNative.Pause(_handle);
         _isPlaying = false;
     }
@@ -110,6 +111,7 @@ public sealed class MacMediaBackend : IMediaBackend, IMediaBackendInfo
             return;
         }
 
+        Console.WriteLine("[MacMediaBackend] Stop()");
         MacNative.Pause(_handle);
         _isPlaying = false;
         PositionChanged?.Invoke(this, TimeSpan.Zero);
@@ -118,7 +120,6 @@ public sealed class MacMediaBackend : IMediaBackend, IMediaBackendInfo
     public void SetVolume(double volume)
     {
         ThrowIfDisposed();
-        // Lo implementaremos después en el bridge Swift.
     }
 
     private void ThrowIfDisposed()
@@ -155,11 +156,16 @@ public sealed class MacMediaBackend : IMediaBackend, IMediaBackendInfo
         Position = TimeSpan.FromSeconds(position);
         Duration = TimeSpan.FromSeconds(duration);
 
+        Console.WriteLine($"[MacMediaBackend] UpdateState -> pos={Position.TotalSeconds:F2}, dur={Duration.TotalSeconds:F2}, ready={isReady}, loaded={_isLoaded}, openedRaised={_hasRaisedMediaOpened}");
+
         if (!_hasRaisedMediaOpened && _isLoaded && isReady == 1)
         {
             _hasRaisedMediaOpened = true;
+            Console.WriteLine("[MacMediaBackend] MediaOpened raised");
             MediaOpened?.Invoke(this, EventArgs.Empty);
         }
+
+        PositionChanged?.Invoke(this, Position);
     }
 
     public void Seek(TimeSpan position)
@@ -171,7 +177,7 @@ public sealed class MacMediaBackend : IMediaBackend, IMediaBackendInfo
             return;
         }
 
+        Console.WriteLine($"[MacMediaBackend] Seek -> requested={position.TotalSeconds:F2}");
         MacNative.tpv_mac_player_seek(_handle, position.TotalSeconds);
-        PositionChanged?.Invoke(this, position);
     }
 }

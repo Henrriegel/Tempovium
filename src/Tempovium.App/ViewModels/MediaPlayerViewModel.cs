@@ -19,6 +19,8 @@ public class MediaPlayerViewModel : ViewModelBase
     private readonly PlaybackTimelineService _timelineService;
 
     private CancellationTokenSource? _playbackLoopCts;
+    private CancellationTokenSource? _seekSettleCts;
+
     private string _backendStatus;
     private string _nativeHostDebugText = "Host nativo aún no inicializado";
     private string _currentMediaTitle = "Ningún medio seleccionado";
@@ -28,10 +30,7 @@ public class MediaPlayerViewModel : ViewModelBase
     private bool _isLoading;
     private string _playerStatusText = "Sin reproducción activa";
 
-    // Control local para evitar que el backend pise el seek recién solicitado.
-    private bool _ignoreBackendPositionUntilSeekSettles;
-    private double? _pendingSeekTargetSeconds;
-    private const double SeekSettleToleranceSeconds = 0.35;
+    private bool _suspendPlaybackPolling;
 
     public LibraryViewModel.SimpleCommand PlayCommand { get; }
     public LibraryViewModel.SimpleCommand PauseCommand { get; }
@@ -62,7 +61,6 @@ public class MediaPlayerViewModel : ViewModelBase
 
         _mediaBackend.MediaOpened += OnMediaOpened;
         _mediaBackend.MediaFailed += OnMediaFailed;
-        _mediaBackend.PositionChanged += OnBackendPositionChanged;
 
         ApplySelectedMedia(_selectedMediaService.SelectedMedia);
     }
@@ -219,7 +217,7 @@ public class MediaPlayerViewModel : ViewModelBase
 
     private void OnMediaOpened(object? sender, EventArgs e)
     {
-        ClearPendingSeekState();
+        Console.WriteLine($"[VM] MediaOpened -> pos={_mediaBackend.Position.TotalSeconds:F2}, dur={_mediaBackend.Duration.TotalSeconds:F2}, playing={_mediaBackend.IsPlaying}");
 
         _timelineService.ApplyBackendState(
             _mediaBackend.Position.TotalSeconds,
@@ -242,25 +240,11 @@ public class MediaPlayerViewModel : ViewModelBase
 
     private void OnMediaFailed(object? sender, string message)
     {
-        ClearPendingSeekState();
+        Console.WriteLine($"[VM] MediaFailed -> {message}");
+
         _timelineService.Reset();
         IsLoading = false;
         PlayerStatusText = $"Error: {message}";
-    }
-
-    private void OnBackendPositionChanged(object? sender, TimeSpan position)
-    {
-        var backendSeconds = position.TotalSeconds;
-
-        if (ShouldIgnoreBackendPosition(backendSeconds))
-        {
-            return;
-        }
-
-        _timelineService.ApplyBackendState(
-            backendSeconds,
-            _mediaBackend.Duration.TotalSeconds,
-            _mediaBackend.IsPlaying);
     }
 
     private void OnSelectedMediaChanged(object? sender, PropertyChangedEventArgs e)
@@ -279,7 +263,11 @@ public class MediaPlayerViewModel : ViewModelBase
             _playbackLoopCts?.Dispose();
             _playbackLoopCts = null;
 
-            ClearPendingSeekState();
+            _seekSettleCts?.Cancel();
+            _seekSettleCts?.Dispose();
+            _seekSettleCts = null;
+
+            _suspendPlaybackPolling = false;
 
             HasSelectedMedia = false;
             CurrentMediaTitle = "Ningún medio seleccionado";
@@ -301,7 +289,12 @@ public class MediaPlayerViewModel : ViewModelBase
         IsLoading = true;
         PlayerStatusText = "Cargando...";
 
-        ClearPendingSeekState();
+        _seekSettleCts?.Cancel();
+        _seekSettleCts?.Dispose();
+        _seekSettleCts = null;
+        _suspendPlaybackPolling = false;
+
+        Console.WriteLine($"[VM] ApplySelectedMedia -> title={media.Title}, type={media.MediaType}, path={media.FilePath}");
 
         try
         {
@@ -314,7 +307,6 @@ public class MediaPlayerViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            ClearPendingSeekState();
             _timelineService.Reset();
             IsLoading = false;
             PlayerStatusText = $"Error al cargar: {ex.Message}";
@@ -351,25 +343,22 @@ public class MediaPlayerViewModel : ViewModelBase
             {
                 await Task.Delay(200, cancellationToken);
 
-                _mediaBackend.UpdateState();
-
-                var backendPosition = _mediaBackend.Position.TotalSeconds;
-                var backendDuration = _mediaBackend.Duration.TotalSeconds;
-
-                if (ShouldIgnoreBackendPosition(backendPosition))
+                if (_suspendPlaybackPolling)
                 {
-                    // Aun así dejamos que duración e isPlaying sigan reflejándose.
-                    _timelineService.ApplyBackendState(
-                        PositionSeconds,
-                        backendDuration,
-                        _mediaBackend.IsPlaying);
+                    Console.WriteLine($"[VM] Poll skipped -> display={_timelineService.DisplayPositionSeconds:F2}, userSeeking={_timelineService.IsUserSeeking}");
                     continue;
                 }
 
+                _mediaBackend.UpdateState();
+
+                Console.WriteLine($"[VM] Poll apply -> backendPos={_mediaBackend.Position.TotalSeconds:F2}, backendDur={_mediaBackend.Duration.TotalSeconds:F2}, playing={_mediaBackend.IsPlaying}, displayBefore={_timelineService.DisplayPositionSeconds:F2}");
+
                 _timelineService.ApplyBackendState(
-                    backendPosition,
-                    backendDuration,
+                    _mediaBackend.Position.TotalSeconds,
+                    _mediaBackend.Duration.TotalSeconds,
                     _mediaBackend.IsPlaying);
+
+                Console.WriteLine($"[VM] Poll applied -> displayAfter={_timelineService.DisplayPositionSeconds:F2}, seekPending={_timelineService.IsSeekPending}");
             }
         }
         catch (TaskCanceledException)
@@ -379,11 +368,19 @@ public class MediaPlayerViewModel : ViewModelBase
 
     public void BeginUserSeek()
     {
+        Console.WriteLine($"[VM] BeginUserSeek -> displayBefore={_timelineService.DisplayPositionSeconds:F2}");
+
+        _seekSettleCts?.Cancel();
+        _seekSettleCts?.Dispose();
+        _seekSettleCts = null;
+
+        _suspendPlaybackPolling = true;
         _timelineService.BeginUserSeek();
     }
 
     public void UpdateUserSeek(double seconds)
     {
+        Console.WriteLine($"[VM] UpdateUserSeek -> seconds={seconds:F2}");
         _timelineService.UpdateUserSeek(seconds);
     }
 
@@ -406,16 +403,56 @@ public class MediaPlayerViewModel : ViewModelBase
             _timelineService.BeginUserSeek();
         }
 
+        Console.WriteLine($"[VM] SeekToAsync(start) -> requested={seconds:F2}, clamped={targetSeconds:F2}, displayBefore={_timelineService.DisplayPositionSeconds:F2}");
+
         _timelineService.UpdateUserSeek(targetSeconds);
         var committedTarget = _timelineService.CommitUserSeek();
 
-        _pendingSeekTargetSeconds = committedTarget;
-        _ignoreBackendPositionUntilSeekSettles = true;
+        Console.WriteLine($"[VM] SeekToAsync(commit) -> committed={committedTarget:F2}, seekPending={_timelineService.IsSeekPending}");
 
         _mediaBackend.Seek(TimeSpan.FromSeconds(committedTarget));
-        _mediaBackend.UpdateState();
+
+        _seekSettleCts?.Cancel();
+        _seekSettleCts?.Dispose();
+        _seekSettleCts = new CancellationTokenSource();
+
+        _ = ResumePollingAfterSeekAsync(_seekSettleCts.Token);
 
         return Task.CompletedTask;
+    }
+
+    private async Task ResumePollingAfterSeekAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await Task.Delay(450, cancellationToken);
+
+            Console.WriteLine("[VM] ResumePollingAfterSeek -> delay finished, forcing one UpdateState");
+
+            _mediaBackend.UpdateState();
+
+            Console.WriteLine($"[VM] ResumePollingAfterSeek -> backendPos={_mediaBackend.Position.TotalSeconds:F2}, backendDur={_mediaBackend.Duration.TotalSeconds:F2}, displayBefore={_timelineService.DisplayPositionSeconds:F2}");
+
+            _timelineService.ApplyBackendState(
+                _mediaBackend.Position.TotalSeconds,
+                _mediaBackend.Duration.TotalSeconds,
+                _mediaBackend.IsPlaying);
+
+            Console.WriteLine($"[VM] ResumePollingAfterSeek -> displayAfter={_timelineService.DisplayPositionSeconds:F2}, seekPending={_timelineService.IsSeekPending}");
+        }
+        catch (TaskCanceledException)
+        {
+            Console.WriteLine("[VM] ResumePollingAfterSeek -> cancelled");
+            return;
+        }
+        finally
+        {
+            if (!cancellationToken.IsCancellationRequested)
+            {
+                _suspendPlaybackPolling = false;
+                Console.WriteLine("[VM] ResumePollingAfterSeek -> polling resumed");
+            }
+        }
     }
 
     public void Play()
@@ -425,7 +462,7 @@ public class MediaPlayerViewModel : ViewModelBase
             return;
         }
 
-        Console.WriteLine("[MediaPlayerVM] Play() desde UI");
+        Console.WriteLine("[VM] Play() desde UI");
 
         _mediaBackend.Play();
         _timelineService.SetPlaybackStateOnly(true);
@@ -441,36 +478,12 @@ public class MediaPlayerViewModel : ViewModelBase
             return;
         }
 
-        Console.WriteLine("[MediaPlayerVM] Pause() desde UI");
+        Console.WriteLine("[VM] Pause() desde UI");
 
         _mediaBackend.Pause();
         _timelineService.SetPlaybackStateOnly(false);
         PlayerStatusText = "Pausado";
         OnPropertyChanged(nameof(IsPlaying));
         OnPropertyChanged(nameof(IsPaused));
-    }
-
-    private bool ShouldIgnoreBackendPosition(double backendSeconds)
-    {
-        if (!_ignoreBackendPositionUntilSeekSettles || _pendingSeekTargetSeconds is null)
-        {
-            return false;
-        }
-
-        var target = _pendingSeekTargetSeconds.Value;
-
-        if (Math.Abs(backendSeconds - target) <= SeekSettleToleranceSeconds)
-        {
-            ClearPendingSeekState();
-            return false;
-        }
-
-        return true;
-    }
-
-    private void ClearPendingSeekState()
-    {
-        _ignoreBackendPositionUntilSeekSettles = false;
-        _pendingSeekTargetSeconds = null;
     }
 }
