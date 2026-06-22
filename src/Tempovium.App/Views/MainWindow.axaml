@@ -5,6 +5,7 @@
         x:Class="Tempovium.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="Tempovium"
+        Icon="/Assets/Branding/tempovium.ico"
         Width="1200"
         Height="760"
         MinWidth="1040"
@@ -65,12 +66,10 @@
                     <Border Width="34"
                             Height="34"
                             CornerRadius="8"
-                            Background="{DynamicResource AppAccentBrush}">
-                        <TextBlock Text="T"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"
-                                   FontWeight="Bold"
-                                   Foreground="White"/>
+                            ClipToBounds="True"
+                            Background="Transparent">
+                        <Image Source="/Assets/Branding/tempovium-mark-transparent-1024.png"
+                               Stretch="Uniform"/>
                     </Border>
 
                     <StackPanel Spacing="0">
