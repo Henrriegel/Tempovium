@@ -14,7 +14,7 @@ public class MediaImportServiceTests
         var repository = new FakeMediaRepository();
         using var folder = TestFolder.Create();
         var filePath = folder.WriteFile("lesson.mp4", "single media");
-        var service = CreateService(repository);
+        var service = CreateService(repository, folder.ManagedMediaPath);
 
         var result = await service.ImportFileAsync(userId, filePath);
 
@@ -22,9 +22,13 @@ public class MediaImportServiceTests
         Assert.Equal(1, result.ImportedCount);
         Assert.Equal(0, result.DuplicateCount);
         Assert.Single(result.ImportedItems);
-        Assert.Equal(filePath, result.ImportedItems[0].FilePath);
-        Assert.Equal(filePath, result.ImportedItems[0].OriginalSourcePath);
-        Assert.Equal(new FileInfo(filePath).Length, result.ImportedItems[0].FileSizeBytes);
+        var item = result.ImportedItems[0];
+        Assert.NotEqual(filePath, item.FilePath);
+        Assert.Equal(folder.ManagedMediaPath, Path.GetDirectoryName(item.FilePath));
+        Assert.True(File.Exists(item.FilePath));
+        Assert.True(File.Exists(filePath));
+        Assert.Equal(filePath, item.OriginalSourcePath);
+        Assert.Equal(new FileInfo(filePath).Length, item.FileSizeBytes);
     }
 
     [Fact]
@@ -34,15 +38,18 @@ public class MediaImportServiceTests
         var repository = new FakeMediaRepository();
         using var folder = TestFolder.Create();
         var filePath = folder.WriteFile("lesson.mp4", "same single media");
-        var service = CreateService(repository);
+        var service = CreateService(repository, folder.ManagedMediaPath);
 
         var first = await service.ImportFileAsync(userId, filePath);
+        Assert.Single(Directory.GetFiles(folder.ManagedMediaPath));
+
         var second = await service.ImportFileAsync(userId, filePath);
 
         Assert.Equal(1, first.ImportedCount);
         Assert.Equal(0, second.ImportedCount);
         Assert.Equal(1, second.DuplicateCount);
         Assert.Single(await repository.GetByUserAsync(userId));
+        Assert.Single(Directory.GetFiles(folder.ManagedMediaPath));
     }
 
     [Fact]
@@ -53,7 +60,7 @@ public class MediaImportServiceTests
         var repository = new FakeMediaRepository();
         using var folder = TestFolder.Create();
         var filePath = folder.WriteFile("lesson.mp4", "shared single media");
-        var service = CreateService(repository);
+        var service = CreateService(repository, folder.ManagedMediaPath);
 
         await service.ImportFileAsync(firstUser, filePath);
         var second = await service.ImportFileAsync(secondUser, filePath);
@@ -62,6 +69,7 @@ public class MediaImportServiceTests
         Assert.Equal(0, second.DuplicateCount);
         Assert.Single(await repository.GetByUserAsync(firstUser));
         Assert.Single(await repository.GetByUserAsync(secondUser));
+        Assert.Equal(2, Directory.GetFiles(folder.ManagedMediaPath).Length);
     }
 
     [Fact]
@@ -70,7 +78,7 @@ public class MediaImportServiceTests
         var repository = new FakeMediaRepository();
         using var folder = TestFolder.Create();
         var filePath = folder.WriteFile("notes.txt", "not media");
-        var service = CreateService(repository);
+        var service = CreateService(repository, folder.ManagedMediaPath);
 
         var result = await service.ImportFileAsync(Guid.NewGuid(), filePath);
 
@@ -78,6 +86,7 @@ public class MediaImportServiceTests
         Assert.Equal(0, result.ImportedCount);
         Assert.Equal(1, result.UnsupportedCount);
         Assert.Empty(result.ImportedItems);
+        Assert.Empty(Directory.GetFiles(folder.ManagedMediaPath));
     }
 
     [Fact]
@@ -86,7 +95,7 @@ public class MediaImportServiceTests
         var repository = new FakeMediaRepository();
         using var folder = TestFolder.Create();
         var missingPath = System.IO.Path.Combine(folder.Path, "missing.mp4");
-        var service = CreateService(repository);
+        var service = CreateService(repository, folder.ManagedMediaPath);
 
         var result = await service.ImportFileAsync(Guid.NewGuid(), missingPath);
 
@@ -94,6 +103,26 @@ public class MediaImportServiceTests
         Assert.Equal(0, result.ImportedCount);
         Assert.Equal(1, result.MissingCount);
         Assert.Equal(1, result.ErrorCount);
+        Assert.Empty(Directory.GetFiles(folder.ManagedMediaPath));
+    }
+
+    [Fact]
+    public async Task FailedCreateDeletesManagedCopy()
+    {
+        var repository = new FakeMediaRepository
+        {
+            ThrowOnCreate = true
+        };
+        using var folder = TestFolder.Create();
+        var filePath = folder.WriteFile("lesson.mp4", "create failure media");
+        var service = CreateService(repository, folder.ManagedMediaPath);
+
+        var result = await service.ImportFileAsync(Guid.NewGuid(), filePath);
+
+        Assert.Equal(0, result.ImportedCount);
+        Assert.Equal(1, result.ErrorCount);
+        Assert.Empty(Directory.GetFiles(folder.ManagedMediaPath));
+        Assert.True(File.Exists(filePath));
     }
 
     [Fact]
@@ -103,9 +132,11 @@ public class MediaImportServiceTests
         var repository = new FakeMediaRepository();
         using var folder = TestFolder.Create();
         folder.WriteFile("lesson.mp4", "same media");
-        var service = CreateService(repository);
+        var service = CreateService(repository, folder.ManagedMediaPath);
 
         var first = await service.ImportFolderAsync(userId, folder.Path);
+        Assert.Single(Directory.GetFiles(folder.ManagedMediaPath));
+
         var second = await service.ImportFolderAsync(userId, folder.Path);
 
         Assert.Equal(1, first.ImportedCount);
@@ -113,6 +144,7 @@ public class MediaImportServiceTests
         Assert.Equal(0, second.ImportedCount);
         Assert.Equal(1, second.DuplicateCount);
         Assert.Single(await repository.GetByUserAsync(userId));
+        Assert.Single(Directory.GetFiles(folder.ManagedMediaPath));
     }
 
     [Fact]
@@ -122,11 +154,14 @@ public class MediaImportServiceTests
         var repository = new FakeMediaRepository();
         using var folder = TestFolder.Create();
         var filePath = folder.WriteFile("lesson.mp4", "folder media");
-        var service = CreateService(repository);
+        var service = CreateService(repository, folder.ManagedMediaPath);
 
         var result = await service.ImportFolderAsync(userId, folder.Path);
 
         var item = Assert.Single(result.ImportedItems);
+        Assert.NotEqual(filePath, item.FilePath);
+        Assert.Equal(folder.ManagedMediaPath, Path.GetDirectoryName(item.FilePath));
+        Assert.True(File.Exists(item.FilePath));
         Assert.Equal(filePath, item.OriginalSourcePath);
         Assert.Equal(new FileInfo(filePath).Length, item.FileSizeBytes);
     }
@@ -139,7 +174,7 @@ public class MediaImportServiceTests
         var repository = new FakeMediaRepository();
         using var folder = TestFolder.Create();
         folder.WriteFile("lesson.mp4", "same media");
-        var service = CreateService(repository);
+        var service = CreateService(repository, folder.ManagedMediaPath);
 
         await service.ImportFolderAsync(firstUser, folder.Path);
         var second = await service.ImportFolderAsync(secondUser, folder.Path);
@@ -148,6 +183,7 @@ public class MediaImportServiceTests
         Assert.Equal(0, second.DuplicateCount);
         Assert.Single(await repository.GetByUserAsync(firstUser));
         Assert.Single(await repository.GetByUserAsync(secondUser));
+        Assert.Equal(2, Directory.GetFiles(folder.ManagedMediaPath).Length);
     }
 
     [Fact]
@@ -156,7 +192,7 @@ public class MediaImportServiceTests
         var repository = new FakeMediaRepository();
         using var folder = TestFolder.Create();
         folder.WriteFile("notes.txt", "not media");
-        var service = CreateService(repository);
+        var service = CreateService(repository, folder.ManagedMediaPath);
 
         var result = await service.ImportFolderAsync(Guid.NewGuid(), folder.Path);
 
@@ -164,14 +200,16 @@ public class MediaImportServiceTests
         Assert.Equal(0, result.ImportedCount);
         Assert.Equal(1, result.UnsupportedCount);
         Assert.Empty(result.ImportedItems);
+        Assert.Empty(Directory.GetFiles(folder.ManagedMediaPath));
     }
 
-    private static MediaImportService CreateService(FakeMediaRepository repository)
+    private static MediaImportService CreateService(FakeMediaRepository repository, string managedMediaDirectory)
     {
         return new MediaImportService(
             repository,
             new TextFileHashService(),
-            new MediaFileTypeDetector());
+            new MediaFileTypeDetector(),
+            managedMediaDirectory);
     }
 
     private sealed class TextFileHashService : IFileHashService
@@ -185,6 +223,8 @@ public class MediaImportServiceTests
     private sealed class FakeMediaRepository : IMediaRepository
     {
         private readonly List<MediaItem> _items = [];
+
+        public bool ThrowOnCreate { get; init; }
 
         public Task<MediaItem?> GetByIdAsync(Guid id)
         {
@@ -203,6 +243,11 @@ public class MediaImportServiceTests
 
         public Task CreateAsync(MediaItem media)
         {
+            if (ThrowOnCreate)
+            {
+                throw new InvalidOperationException("Create failed");
+            }
+
             _items.Add(media);
             return Task.CompletedTask;
         }
@@ -221,22 +266,30 @@ public class MediaImportServiceTests
 
     private sealed class TestFolder : IDisposable
     {
-        public string Path { get; }
+        private readonly string _rootPath;
 
-        private TestFolder(string path)
+        public string Path { get; }
+        public string ManagedMediaPath { get; }
+
+        private TestFolder(string rootPath, string sourcePath, string managedMediaPath)
         {
-            Path = path;
+            _rootPath = rootPath;
+            Path = sourcePath;
+            ManagedMediaPath = managedMediaPath;
         }
 
         public static TestFolder Create()
         {
-            var path = System.IO.Path.Combine(
+            var rootPath = System.IO.Path.Combine(
                 System.IO.Path.GetTempPath(),
                 "TempoviumImportTests",
                 Guid.NewGuid().ToString("N"));
+            var sourcePath = System.IO.Path.Combine(rootPath, "source");
+            var managedMediaPath = System.IO.Path.Combine(rootPath, "managed-media");
 
-            Directory.CreateDirectory(path);
-            return new TestFolder(path);
+            Directory.CreateDirectory(sourcePath);
+            Directory.CreateDirectory(managedMediaPath);
+            return new TestFolder(rootPath, sourcePath, managedMediaPath);
         }
 
         public string WriteFile(string fileName, string content)
@@ -248,9 +301,9 @@ public class MediaImportServiceTests
 
         public void Dispose()
         {
-            if (Directory.Exists(Path))
+            if (Directory.Exists(_rootPath))
             {
-                Directory.Delete(Path, recursive: true);
+                Directory.Delete(_rootPath, recursive: true);
             }
         }
     }

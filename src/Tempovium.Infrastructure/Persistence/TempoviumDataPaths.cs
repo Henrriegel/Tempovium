@@ -6,6 +6,7 @@ public static class TempoviumDataPaths
 {
     public const string AppDirectoryName = "Tempovium";
     public const string DatabaseFileName = "tempovium.db";
+    public const string ManagedMediaDirectoryName = "Media";
 
     public static string GetAppDataDirectory()
     {
@@ -27,6 +28,18 @@ public static class TempoviumDataPaths
     public static string GetDatabasePath(string appDataRoot)
     {
         return Path.Combine(GetAppDataDirectory(appDataRoot), DatabaseFileName);
+    }
+
+    public static string GetManagedMediaDirectory()
+    {
+        return GetManagedMediaDirectory(GetAppDataRoot());
+    }
+
+    public static string GetManagedMediaDirectory(string appDataRoot)
+    {
+        var path = Path.Combine(GetAppDataDirectory(appDataRoot), ManagedMediaDirectoryName);
+        Directory.CreateDirectory(path);
+        return path;
     }
 
     public static string GetSqliteConnectionString()

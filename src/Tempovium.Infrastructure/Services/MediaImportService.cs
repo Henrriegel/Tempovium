@@ -2,6 +2,7 @@ using Tempovium.Core.Entities;
 using Tempovium.Core.Interfaces;
 using Tempovium.Core.Models;
 using Tempovium.Core.Services;
+using Tempovium.Infrastructure.Persistence;
 
 namespace Tempovium.Infrastructure.Services;
 
@@ -10,15 +11,31 @@ public class MediaImportService : IMediaImportService
     private readonly IMediaRepository _mediaRepository;
     private readonly IFileHashService _fileHashService;
     private readonly MediaFileTypeDetector _typeDetector;
+    private readonly string _managedMediaDirectory;
 
     public MediaImportService(
         IMediaRepository mediaRepository,
         IFileHashService fileHashService,
         MediaFileTypeDetector typeDetector)
+        : this(
+            mediaRepository,
+            fileHashService,
+            typeDetector,
+            TempoviumDataPaths.GetManagedMediaDirectory())
+    {
+    }
+
+    public MediaImportService(
+        IMediaRepository mediaRepository,
+        IFileHashService fileHashService,
+        MediaFileTypeDetector typeDetector,
+        string managedMediaDirectory)
     {
         _mediaRepository = mediaRepository;
         _fileHashService = fileHashService;
         _typeDetector = typeDetector;
+        _managedMediaDirectory = managedMediaDirectory;
+        Directory.CreateDirectory(_managedMediaDirectory);
     }
 
     public async Task<MediaImportResult> ImportFolderAsync(Guid userId, string folderPath)
@@ -95,12 +112,26 @@ public class MediaImportService : IMediaImportService
                 return;
             }
 
+            var mediaId = Guid.NewGuid();
+            var managedPath = GetManagedMediaPath(mediaId, filePath);
+
+            try
+            {
+                Directory.CreateDirectory(_managedMediaDirectory);
+                File.Copy(filePath, managedPath, overwrite: false);
+            }
+            catch
+            {
+                TryDeleteFile(managedPath);
+                throw;
+            }
+
             var media = new MediaItem
             {
-                Id = Guid.NewGuid(),
+                Id = mediaId,
                 UserId = userId,
                 Title = Path.GetFileNameWithoutExtension(filePath),
-                FilePath = filePath,
+                FilePath = managedPath,
                 OriginalSourcePath = filePath,
                 FileSizeBytes = fileInfo.Length,
                 FileHash = hash,
@@ -109,7 +140,15 @@ public class MediaImportService : IMediaImportService
                 CreatedAt = DateTime.UtcNow
             };
 
-            await _mediaRepository.CreateAsync(media);
+            try
+            {
+                await _mediaRepository.CreateAsync(media);
+            }
+            catch
+            {
+                TryDeleteFile(managedPath);
+                throw;
+            }
 
             result.ImportedItems.Add(media);
             result.ImportedCount++;
@@ -117,6 +156,27 @@ public class MediaImportService : IMediaImportService
         catch (Exception ex)
         {
             result.ErrorMessages.Add($"{Path.GetFileName(filePath)}: {ex.Message}");
+        }
+    }
+
+    private string GetManagedMediaPath(Guid mediaId, string sourcePath)
+    {
+        var extension = Path.GetExtension(sourcePath);
+        return Path.Combine(_managedMediaDirectory, $"{mediaId:N}{extension}");
+    }
+
+    private static void TryDeleteFile(string filePath)
+    {
+        try
+        {
+            if (File.Exists(filePath))
+            {
+                File.Delete(filePath);
+            }
+        }
+        catch
+        {
+            // Import result still reports the original failure.
         }
     }
 }

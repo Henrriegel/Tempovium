@@ -37,6 +37,7 @@ The product should feel like a professional teaching workspace: reliable playbac
 - Users can choose detected videos/audio and edit display names before import.
 - Imported media is copied into an app-managed local media folder.
 - External source paths are stored only as source metadata, not as the primary playable path.
+- Expanded Windows import/library media extension support, including `.mkv`.
 - Duplicate detection stronger than name, duration, or file size alone.
 - Local/offline library.
 - yt-dlp-based URL import module.
@@ -186,6 +187,9 @@ Visual redesign requirements:
 - Improve spacing.
 - Modernize cards.
 - Make the app look professional enough for classroom preparation work.
+- Hide full internal AppData media paths from normal library cards.
+- Show a short media identity value instead, such as the managed file name/hash without extension.
+- Show a dimming full-screen import loading overlay for both `Importar archivo` and `Importar carpeta`.
 
 Before implementing the full UI redesign, create visual mockups/designs for:
 
@@ -194,6 +198,11 @@ Before implementing the full UI redesign, create visual mockups/designs for:
 - settings screen
 - account backup/restore screen
 - class mode screen
+
+Next functional block:
+
+- The next functional development block must be the full modern Avalonia UI recreation.
+- Include user cards, password prompt, configurable remember-session, top bar, logout, switch account, settings, light/dark/system theme, import/export/account options, cleaner library/player/notes workspace, modern cards, reduced noisy borders, import overlay, and hidden internal AppData paths.
 
 Do not implement UI changes in this task.
 
@@ -205,6 +214,8 @@ Tempovium should manage imported media files inside an app-controlled local stor
 - On macOS, managed media should live under the appropriate app support/data directory.
 - The original imported file path should be retained only as metadata for traceability/relinking.
 - The library should point to the managed copy after import.
+- Normal library cards should not show the full managed AppData path because it is an internal implementation detail.
+- Prefer a short managed media identity, such as the managed file name/hash without extension, while keeping original path metadata available internally.
 - This reduces broken library entries when a user deletes, renames, or moves original files.
 - This applies to folder import and single-file import.
 - This affects future yt-dlp imports, package imports, and account backup/restore.
@@ -235,6 +246,12 @@ Intended folder import flow:
 - On confirm, calculate fingerprints/hashes.
 - On confirm, create library records.
 - On confirm, show an import summary.
+- During import, show a global loading overlay that dims the app and clearly indicates import is running.
+
+Windows media extension compatibility:
+
+- Windows import/library should support broader common media extensions, including `.mkv`.
+- Playback can still depend on the active platform backend; MKV limits are mainly a macOS playback/backend concern, not a reason to block Windows import/library support.
 
 ## 10. Duplicate Detection Strategy
 
@@ -381,6 +398,7 @@ Windows validation note:
 - App-data SQLite path is validated at `C:\Users\legarcia\AppData\Local\Tempovium\tempovium.db`; `Test-Path "$env:LOCALAPPDATA\Tempovium\tempovium.db"` returned `True`. App opens, existing user/library/notes load, new or edited notes persist after close/reopen, no visible `TempoviumMacBridge` error appeared, `dotnet build Tempovium.sln` succeeded, and `dotnet test Tempovium.sln --no-build` passed with 21/21 tests.
 - Import result summary and user-scoped duplicate detection are validated on Windows. First import reported imported 1, duplicates 0, unsupported 9, errors 0; same-user reimport reported imported 0, duplicates 1, unsupported 9, errors 0; a different user could import the same media with imported 1, duplicates 0, unsupported 9, errors 0. Same-user library did not duplicate media, existing notes still loaded, no visible `TempoviumMacBridge` error appeared, `dotnet build Tempovium.sln` succeeded, and `dotnet test Tempovium.sln --no-build` passed with 24/24 tests.
 - Single-file media import is validated on Windows. `Importar archivo` appears next to `Importar carpeta`; importing one supported file reported imported 1, duplicates 0, unsupported 0, errors 0; same-user reimport reported imported 0, duplicates 1, unsupported 0, errors 0; the library did not duplicate the media, no visible `TempoviumMacBridge` error appeared, `dotnet build Tempovium.sln` succeeded, and `dotnet test Tempovium.sln --no-build` passed with 29/29 tests.
+- Managed media copy-on-import is validated on Windows. A new supported media file is copied under `C:\Users\legarcia\AppData\Local\Tempovium\Media`, the original source file remains in place, same-user reimport reports a duplicate without duplicating the library item, no visible `TempoviumMacBridge` error appeared, `dotnet build Tempovium.sln` succeeded, and `dotnet test Tempovium.sln --no-build` passed with 32/32 tests.
 
 Dependencies:
 
@@ -402,6 +420,8 @@ What changes:
 - Add light/dark/system theme using Avalonia resources/theme variants.
 - Replace hardcoded colors with semantic resources.
 - Reduce noisy borders and improve spacing/card polish.
+- Hide internal managed AppData paths in normal library display.
+- Add a full-screen dimming import loading overlay.
 - Extract reusable controls where they remove real duplication.
 
 What not to do yet:
