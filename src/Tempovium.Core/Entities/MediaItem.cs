@@ -8,6 +8,8 @@ public class MediaItem
     public Guid UserId { get; set; }
     public string Title { get; set; } = String.Empty;
     public string FilePath { get; set; } = String.Empty;
+    public string? OriginalSourcePath { get; set; }
+    public long FileSizeBytes { get; set; }
     public MediaType MediaType { get; set; }
     public double DurationSeconds { get; set; }
     public string FileHash { get; set; } = String.Empty;

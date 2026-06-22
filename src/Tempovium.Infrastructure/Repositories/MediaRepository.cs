@@ -28,10 +28,10 @@ public class MediaRepository : IMediaRepository
             .ToListAsync();
     }
 
-    public async Task<MediaItem?> GetByHashAsync(string hash)
+    public async Task<MediaItem?> GetByHashAsync(Guid userId, string hash)
     {
         return await _db.MediaItems
-            .FirstOrDefaultAsync(x => x.FileHash == hash);
+            .FirstOrDefaultAsync(x => x.UserId == userId && x.FileHash == hash);
     }
 
     public async Task CreateAsync(MediaItem media)

@@ -8,6 +8,8 @@ public interface IMediaNoteRepository
 
     Task AddNoteAsync(MediaNote note);
 
+    Task<MediaNote?> UpdateNoteAsync(Guid noteId, string content);
+
     Task DeleteNoteAsync(Guid noteId);
 
     Task SaveChangesAsync();

@@ -20,6 +20,8 @@
       <TextBlock Text="Biblioteca"
                  FontSize="28"
                  FontWeight="Bold"/>
+      <Button Content="Importar archivo"
+              Command="{Binding ImportFileCommand}"/>
       <Button Content="Importar carpeta"
               Command="{Binding ImportFolderCommand}"/>
     </StackPanel>

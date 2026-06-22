@@ -8,6 +8,7 @@ using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 using Tempovium.Core.Entities;
 using Tempovium.Core.Interfaces;
+using Tempovium.Core.Models;
 using Tempovium.Core.Services;
 using Tempovium.Services;
 
@@ -40,6 +41,7 @@ public class LibraryViewModel : ViewModelBase
         MediaPlayerViewModel = mediaPlayerViewModel;
 
         ImportFolderCommand = new SimpleCommand(ExecuteImportFolder);
+        ImportFileCommand = new SimpleCommand(ExecuteImportFile);
         _ = LoadLibraryAsync();
     }
 
@@ -90,6 +92,7 @@ public class LibraryViewModel : ViewModelBase
             : Path.GetDirectoryName(SelectedMedia.FilePath) ?? string.Empty;
 
     public ICommand ImportFolderCommand { get; }
+    public ICommand ImportFileCommand { get; }
 
     private async Task LoadLibraryAsync()
     {
@@ -140,11 +143,66 @@ public class LibraryViewModel : ViewModelBase
         }
 
         var user = _userSessionService.CurrentUser!;
-        var importedItems = await _mediaImportService.ImportFolderAsync(user.Id, folderPath);
+        var importResult = await _mediaImportService.ImportFolderAsync(user.Id, folderPath);
 
         await LoadLibraryAsync();
 
-        StatusMessage = $"Importación completada. Se agregaron {importedItems.Count} archivo(s).";
+        StatusMessage = FormatImportSummary(importResult);
+    }
+
+    private async void ExecuteImportFile()
+    {
+        if (!_userSessionService.IsLoggedIn)
+        {
+            StatusMessage = "No hay un usuario con sesión activa.";
+            return;
+        }
+
+        var topLevel = TopLevel.GetTopLevel(
+            Application.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop
+                ? desktop.MainWindow
+                : null);
+
+        if (topLevel == null)
+        {
+            StatusMessage = "No se pudo acceder a la ventana principal.";
+            return;
+        }
+
+        var files = await topLevel.StorageProvider.OpenFilePickerAsync(
+            new FilePickerOpenOptions
+            {
+                Title = "Selecciona un archivo de medio",
+                AllowMultiple = false
+            });
+
+        if (files.Count == 0)
+        {
+            StatusMessage = "No se seleccionó ningún archivo.";
+            return;
+        }
+
+        var filePath = files[0].Path.LocalPath;
+        if (string.IsNullOrWhiteSpace(filePath))
+        {
+            StatusMessage = "El archivo seleccionado no tiene una ruta válida.";
+            return;
+        }
+
+        var user = _userSessionService.CurrentUser!;
+        var importResult = await _mediaImportService.ImportFileAsync(user.Id, filePath);
+
+        await LoadLibraryAsync();
+
+        StatusMessage = FormatImportSummary(importResult);
+    }
+
+    private static string FormatImportSummary(MediaImportResult result)
+    {
+        return $"Importación completada. Importados: {result.ImportedCount}. " +
+               $"Duplicados omitidos: {result.DuplicateCount}. " +
+               $"No compatibles omitidos: {result.UnsupportedCount}. " +
+               $"Errores: {result.ErrorCount}.";
     }
 
     public class SimpleCommand : ICommand

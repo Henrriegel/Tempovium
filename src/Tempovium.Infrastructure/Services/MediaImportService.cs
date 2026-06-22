@@ -1,5 +1,4 @@
 using Tempovium.Core.Entities;
-using Tempovium.Core.Enums;
 using Tempovium.Core.Interfaces;
 using Tempovium.Core.Models;
 using Tempovium.Core.Services;
@@ -22,35 +21,88 @@ public class MediaImportService : IMediaImportService
         _typeDetector = typeDetector;
     }
 
-    public async Task<List<MediaItem>> ImportFolderAsync(Guid userId, string folderPath)
+    public async Task<MediaImportResult> ImportFolderAsync(Guid userId, string folderPath)
     {
-        var results = new List<MediaItem>();
+        var result = new MediaImportResult();
 
         if (!Directory.Exists(folderPath))
-            return results;
+        {
+            result.MissingCount = 1;
+            result.ErrorMessages.Add($"Folder not found: {folderPath}");
+            return result;
+        }
 
-        var files = Directory.GetFiles(folderPath, "*.*", SearchOption.AllDirectories);
+        string[] files;
+        try
+        {
+            files = Directory.GetFiles(folderPath, "*.*", SearchOption.AllDirectories);
+        }
+        catch (Exception ex)
+        {
+            result.ErrorMessages.Add(ex.Message);
+            return result;
+        }
+
+        result.TotalFilesScanned = files.Length;
 
         foreach (var file in files)
         {
-            var mediaType = _typeDetector.DetectFromPath(file);
+            await ImportExistingFileAsync(userId, file, result);
+        }
 
-            if (mediaType is null)
-                continue;
+        return result;
+    }
 
-            var hash = await _fileHashService.ComputeHashAsync(file);
+    public async Task<MediaImportResult> ImportFileAsync(Guid userId, string filePath)
+    {
+        var result = new MediaImportResult
+        {
+            TotalFilesScanned = 1
+        };
 
-            var existing = await _mediaRepository.GetByHashAsync(hash);
+        if (!File.Exists(filePath))
+        {
+            result.MissingCount = 1;
+            result.ErrorMessages.Add($"File not found: {filePath}");
+            return result;
+        }
+
+        await ImportExistingFileAsync(userId, filePath, result);
+
+        return result;
+    }
+
+    private async Task ImportExistingFileAsync(Guid userId, string filePath, MediaImportResult result)
+    {
+        var mediaType = _typeDetector.DetectFromPath(filePath);
+
+        if (mediaType is null)
+        {
+            result.UnsupportedCount++;
+            return;
+        }
+
+        try
+        {
+            var fileInfo = new FileInfo(filePath);
+            var hash = await _fileHashService.ComputeHashAsync(filePath);
+
+            var existing = await _mediaRepository.GetByHashAsync(userId, hash);
 
             if (existing != null)
-                continue;
+            {
+                result.DuplicateCount++;
+                return;
+            }
 
             var media = new MediaItem
             {
                 Id = Guid.NewGuid(),
                 UserId = userId,
-                Title = Path.GetFileNameWithoutExtension(file),
-                FilePath = file,
+                Title = Path.GetFileNameWithoutExtension(filePath),
+                FilePath = filePath,
+                OriginalSourcePath = filePath,
+                FileSizeBytes = fileInfo.Length,
                 FileHash = hash,
                 MediaType = mediaType.Value,
                 DurationSeconds = 0,
@@ -59,9 +111,12 @@ public class MediaImportService : IMediaImportService
 
             await _mediaRepository.CreateAsync(media);
 
-            results.Add(media);
+            result.ImportedItems.Add(media);
+            result.ImportedCount++;
         }
-
-        return results;
+        catch (Exception ex)
+        {
+            result.ErrorMessages.Add($"{Path.GetFileName(filePath)}: {ex.Message}");
+        }
     }
 }

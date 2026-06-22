@@ -23,4 +23,11 @@ public class NoteItemViewModel : ViewModelBase
     {
         Note = note;
     }
+
+    public void UpdateContent(string content, DateTime? updatedAt)
+    {
+        Note.Content = content;
+        Note.UpdatedAt = updatedAt;
+        OnPropertyChanged(nameof(Content));
+    }
 }

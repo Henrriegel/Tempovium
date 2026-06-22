@@ -9,7 +9,7 @@ public class TempoviumDbContextFactory : IDesignTimeDbContextFactory<TempoviumDb
     {
         var optionsBuilder = new DbContextOptionsBuilder<TempoviumDbContext>();
 
-        optionsBuilder.UseSqlite("Data Source=tempovium.db");
+        optionsBuilder.UseSqlite(TempoviumDataPaths.GetSqliteConnectionString());
 
         return new TempoviumDbContext(optionsBuilder.Options);
     }

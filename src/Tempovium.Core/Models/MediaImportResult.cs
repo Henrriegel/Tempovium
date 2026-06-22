@@ -10,4 +10,6 @@ public class MediaImportResult
     public int UnsupportedCount { get; set; }
     public int MissingCount { get; set; }
     public List<MediaItem> ImportedItems { get; set; } = [];
+    public List<string> ErrorMessages { get; set; } = [];
+    public int ErrorCount => ErrorMessages.Count;
 }

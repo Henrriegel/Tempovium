@@ -4,6 +4,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Tempovium.Media.Mac;
 using Tempovium.ViewModels;
 
 namespace Tempovium.Controls;
@@ -11,6 +12,7 @@ namespace Tempovium.Controls;
 public partial class MediaPlayerView : UserControl
 {
     private Slider? _timelineSlider;
+    private ContentControl? _nativeVideoHostContainer;
     private bool _isDraggingTimeline;
     private double _dragSeekValue;
 
@@ -19,12 +21,37 @@ public partial class MediaPlayerView : UserControl
         InitializeComponent();
 
         _timelineSlider = this.FindControl<Slider>("TimelineSlider");
+        _nativeVideoHostContainer = this.FindControl<ContentControl>("NativeVideoHostContainer");
+        DataContextChanged += (_, _) => AttachMacNativeVideoHostIfAvailable();
+
         if (_timelineSlider is not null)
         {
             _timelineSlider.AddHandler(InputElement.PointerPressedEvent, OnTimelineSliderPointerPressed, RoutingStrategies.Tunnel | RoutingStrategies.Bubble, handledEventsToo: true);
             _timelineSlider.AddHandler(InputElement.PointerReleasedEvent, OnTimelineSliderPointerReleased, RoutingStrategies.Tunnel | RoutingStrategies.Bubble, handledEventsToo: true);
             _timelineSlider.PropertyChanged += OnTimelineSliderPropertyChanged;
         }
+    }
+
+    private void AttachMacNativeVideoHostIfAvailable()
+    {
+        if (!OperatingSystem.IsMacOS() ||
+            _nativeVideoHostContainer is null ||
+            DataContext is not MediaPlayerViewModel viewModel ||
+            viewModel.TemporaryMacNativeVideoBackend is null)
+        {
+            return;
+        }
+
+        if (_nativeVideoHostContainer.Content is MacVideoHost host)
+        {
+            host.Backend = viewModel.TemporaryMacNativeVideoBackend;
+            return;
+        }
+
+        _nativeVideoHostContainer.Content = new MacVideoHost
+        {
+            Backend = viewModel.TemporaryMacNativeVideoBackend
+        };
     }
 
     private void OnTimelineSliderPointerPressed(object? sender, PointerPressedEventArgs e)

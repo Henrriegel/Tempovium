@@ -19,7 +19,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Tempovium.App\Tempovium.App.csproj" />
     <ProjectReference Include="..\..\src\Tempovium.Core\Tempovium.Core.csproj" />
+    <ProjectReference Include="..\..\src\Tempovium.Infrastructure\Tempovium.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Tempovium.Media.Abstractions\Tempovium.Media.Abstractions.csproj" />
   </ItemGroup>
 
 </Project>

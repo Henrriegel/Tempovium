@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Tempovium.Core.Entities;
 using Tempovium.Core.Services;
+using Tempovium.Media.Abstractions.Backends;
 using Tempovium.Media.Abstractions.Contracts;
 using Tempovium.Media.Mac.Backends;
 using Tempovium.Services;
@@ -12,11 +13,12 @@ namespace Tempovium.ViewModels;
 
 public class MediaPlayerViewModel : ViewModelBase
 {
-    public MacMediaBackend? MacBackend => _mediaBackend as MacMediaBackend;
+    public MacMediaBackend? TemporaryMacNativeVideoBackend => _mediaBackend as MacMediaBackend;
 
     private readonly SelectedMediaService _selectedMediaService;
     private readonly IMediaBackend _mediaBackend;
     private readonly PlaybackTimelineService _timelineService;
+    private readonly PlaybackControlService _playbackControlService;
 
     private CancellationTokenSource? _playbackLoopCts;
     private CancellationTokenSource? _seekSettleCts;
@@ -38,11 +40,13 @@ public class MediaPlayerViewModel : ViewModelBase
     public MediaPlayerViewModel(
         SelectedMediaService selectedMediaService,
         IMediaBackend mediaBackend,
-        PlaybackTimelineService timelineService)
+        PlaybackTimelineService timelineService,
+        PlaybackControlService playbackControlService)
     {
         _selectedMediaService = selectedMediaService;
         _mediaBackend = mediaBackend;
         _timelineService = timelineService;
+        _playbackControlService = playbackControlService;
 
         PlayCommand = new LibraryViewModel.SimpleCommand(Play);
         PauseCommand = new LibraryViewModel.SimpleCommand(Pause);
@@ -61,6 +65,7 @@ public class MediaPlayerViewModel : ViewModelBase
 
         _mediaBackend.MediaOpened += OnMediaOpened;
         _mediaBackend.MediaFailed += OnMediaFailed;
+        _playbackControlService.SeekRequested += OnSeekRequested;
 
         ApplySelectedMedia(_selectedMediaService.SelectedMedia);
     }
@@ -117,8 +122,7 @@ public class MediaPlayerViewModel : ViewModelBase
             OnPropertyChanged(nameof(IsVideo));
             OnPropertyChanged(nameof(IsNotAudio));
             OnPropertyChanged(nameof(IsNotVideo));
-            OnPropertyChanged(nameof(ShowNativeVideoHost));
-            OnPropertyChanged(nameof(ShowAudioTransportControls));
+            NotifyPlaybackSurfaceProperties();
         }
     }
 
@@ -135,6 +139,7 @@ public class MediaPlayerViewModel : ViewModelBase
             _hasSelectedMedia = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(HasNoSelectedMedia));
+            NotifyPlaybackSurfaceProperties();
         }
     }
 
@@ -148,9 +153,15 @@ public class MediaPlayerViewModel : ViewModelBase
 
     public bool IsNotVideo => !IsVideo;
 
-    public bool ShowNativeVideoHost => HasSelectedMedia && IsVideo;
+    public bool IsPlaybackUnsupported => _mediaBackend is UnsupportedMediaBackend;
 
-    public bool ShowAudioTransportControls => HasSelectedMedia && IsAudio;
+    public string UnsupportedPlaybackMessage => UnsupportedMediaBackend.UnsupportedMessage;
+
+    public bool ShowUnsupportedPlaybackPlaceholder => HasSelectedMedia && IsPlaybackUnsupported;
+
+    public bool ShowNativeVideoHost => HasSelectedMedia && IsVideo && !IsPlaybackUnsupported;
+
+    public bool ShowAudioTransportControls => HasSelectedMedia && IsAudio && !IsPlaybackUnsupported;
 
     public bool IsLoading
     {
@@ -255,6 +266,11 @@ public class MediaPlayerViewModel : ViewModelBase
         }
     }
 
+    private void OnSeekRequested(double seconds)
+    {
+        _ = SeekToAsync(seconds);
+    }
+
     private void ApplySelectedMedia(MediaItem? media)
     {
         if (media is null)
@@ -277,8 +293,7 @@ public class MediaPlayerViewModel : ViewModelBase
             PlayerStatusText = "Sin reproducción activa";
             _timelineService.Reset();
 
-            OnPropertyChanged(nameof(ShowNativeVideoHost));
-            OnPropertyChanged(nameof(ShowAudioTransportControls));
+            NotifyPlaybackSurfaceProperties();
             return;
         }
 
@@ -312,7 +327,10 @@ public class MediaPlayerViewModel : ViewModelBase
             PlayerStatusText = $"Error al cargar: {ex.Message}";
         }
 
-        RestartPlaybackLoop();
+        if (!IsPlaybackUnsupported)
+        {
+            RestartPlaybackLoop();
+        }
     }
 
     public string NativeHostDebugText
@@ -485,5 +503,12 @@ public class MediaPlayerViewModel : ViewModelBase
         PlayerStatusText = "Pausado";
         OnPropertyChanged(nameof(IsPlaying));
         OnPropertyChanged(nameof(IsPaused));
+    }
+
+    private void NotifyPlaybackSurfaceProperties()
+    {
+        OnPropertyChanged(nameof(ShowNativeVideoHost));
+        OnPropertyChanged(nameof(ShowAudioTransportControls));
+        OnPropertyChanged(nameof(ShowUnsupportedPlaybackPlaceholder));
     }
 }

@@ -18,6 +18,7 @@ public class NotesPanelViewModel : ViewModelBase
 
     private string _newNoteContent = string.Empty;
     private NoteItemViewModel? _activeNote;
+    private NoteItemViewModel? _editingNote;
 
     public ObservableCollection<NoteItemViewModel> Notes { get; } = new();
 
@@ -33,10 +34,17 @@ public class NotesPanelViewModel : ViewModelBase
         set => SetProperty(ref _activeNote, value);
     }
 
+    public bool IsEditing => _editingNote is not null;
+
     public string AddNoteButtonText
     {
         get
         {
+            if (IsEditing)
+            {
+                return "Guardar cambios";
+            }
+
             var time = TimeSpan.FromSeconds(_timelineService.DisplayPositionSeconds);
             var formatted = time.TotalHours >= 1
                 ? time.ToString(@"hh\:mm\:ss", CultureInfo.InvariantCulture)
@@ -78,6 +86,7 @@ public class NotesPanelViewModel : ViewModelBase
 
     public async Task LoadNotesAsync()
     {
+        CancelEdit();
         Notes.Clear();
 
         var media = _selectedMediaService.SelectedMedia;
@@ -98,6 +107,12 @@ public class NotesPanelViewModel : ViewModelBase
 
     public async Task AddNoteAsync()
     {
+        if (_editingNote is not null)
+        {
+            await UpdateEditingNoteAsync();
+            return;
+        }
+
         var media = _selectedMediaService.SelectedMedia;
         if (media is null)
         {
@@ -137,6 +152,32 @@ public class NotesPanelViewModel : ViewModelBase
         UpdateActiveNote();
     }
 
+    public void StartEditNote(NoteItemViewModel note)
+    {
+        if (note == null)
+        {
+            return;
+        }
+
+        _editingNote = note;
+        NewNoteContent = note.Content;
+        OnPropertyChanged(nameof(IsEditing));
+        OnPropertyChanged(nameof(AddNoteButtonText));
+    }
+
+    public void CancelEdit()
+    {
+        if (_editingNote is null && string.IsNullOrEmpty(NewNoteContent))
+        {
+            return;
+        }
+
+        _editingNote = null;
+        NewNoteContent = string.Empty;
+        OnPropertyChanged(nameof(IsEditing));
+        OnPropertyChanged(nameof(AddNoteButtonText));
+    }
+
     public void JumpToNote(NoteItemViewModel note)
     {
         if (note == null)
@@ -159,11 +200,43 @@ public class NotesPanelViewModel : ViewModelBase
 
         Notes.Remove(note);
 
+        if (ReferenceEquals(_editingNote, note))
+        {
+            CancelEdit();
+        }
+
         if (ReferenceEquals(ActiveNote, note))
         {
             ActiveNote = null;
         }
 
+        UpdateActiveNote();
+    }
+
+    private async Task UpdateEditingNoteAsync()
+    {
+        var note = _editingNote;
+        if (note is null)
+        {
+            return;
+        }
+
+        var content = NewNoteContent.Trim();
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return;
+        }
+
+        var updated = await _noteRepository.UpdateNoteAsync(note.Id, content);
+        if (updated is null)
+        {
+            return;
+        }
+
+        await _noteRepository.SaveChangesAsync();
+
+        note.UpdateContent(updated.Content, updated.UpdatedAt);
+        CancelEdit();
         UpdateActiveNote();
     }
 

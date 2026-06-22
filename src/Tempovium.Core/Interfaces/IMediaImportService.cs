@@ -1,8 +1,10 @@
-using Tempovium.Core.Entities;
+using Tempovium.Core.Models;
 
 namespace Tempovium.Core.Interfaces;
 
 public interface IMediaImportService
 {
-    Task<List<MediaItem>> ImportFolderAsync(Guid userId, string folderPath);
+    Task<MediaImportResult> ImportFolderAsync(Guid userId, string folderPath);
+
+    Task<MediaImportResult> ImportFileAsync(Guid userId, string filePath);
 }

@@ -26,9 +26,17 @@
                      TextWrapping="Wrap"
                      MinHeight="60"/>
 
-            <Button Content="{Binding AddNoteButtonText}"
-                    HorizontalAlignment="Left"
-                    Click="AddNote_Click"/>
+            <StackPanel Orientation="Horizontal"
+                        Spacing="8">
+                <Button Content="{Binding AddNoteButtonText}"
+                        HorizontalAlignment="Left"
+                        Click="AddNote_Click"/>
+
+                <Button Content="Cancelar edición"
+                        HorizontalAlignment="Left"
+                        IsVisible="{Binding IsEditing}"
+                        Click="CancelEdit_Click"/>
+            </StackPanel>
 
             <Separator/>
 
@@ -47,7 +55,7 @@
                                                FontWeight="Bold"
                                                IsVisible="{Binding IsActive}"/>
 
-                                    <Grid ColumnDefinitions="Auto,*,Auto"
+                                    <Grid ColumnDefinitions="Auto,*,Auto,Auto"
                                           ColumnSpacing="10">
                                         <Button Content="{Binding TimestampSeconds, Converter={StaticResource SecondsToTimestampConverter}}"
                                                 Click="JumpToNote_Click"
@@ -60,6 +68,12 @@
                                                    VerticalAlignment="Center"/>
 
                                         <Button Grid.Column="2"
+                                                Content="Editar"
+                                                Click="EditNote_Click"
+                                                HorizontalAlignment="Right"
+                                                VerticalAlignment="Top"/>
+
+                                        <Button Grid.Column="3"
                                                 Content="Eliminar"
                                                 Click="DeleteNote_Click"
                                                 HorizontalAlignment="Right"

@@ -27,6 +27,21 @@ public class MediaNoteRepository : IMediaNoteRepository
         await _context.MediaNotes.AddAsync(note);
     }
 
+    public async Task<MediaNote?> UpdateNoteAsync(Guid noteId, string content)
+    {
+        var note = await _context.MediaNotes.FindAsync(noteId);
+
+        if (note is null)
+        {
+            return null;
+        }
+
+        note.Content = content;
+        note.UpdatedAt = DateTime.UtcNow;
+
+        return note;
+    }
+
     public async Task DeleteNoteAsync(Guid noteId)
     {
         var note = await _context.MediaNotes.FindAsync(noteId);

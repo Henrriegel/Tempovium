@@ -4,12 +4,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Tempovium.Core.Services;
+using Tempovium.DependencyInjection;
 using Tempovium.Infrastructure.DependencyInjection;
 using Tempovium.Infrastructure.Persistence;
 using Tempovium.Services;
 using Tempovium.ViewModels;
-using Tempovium.Media.Abstractions.Contracts;
-using Tempovium.Media.Mac.Backends;
 
 namespace Tempovium;
 
@@ -25,13 +24,8 @@ internal class Program
             .ConfigureServices((context, services) =>
             {
                 services.AddTempoviumInfrastructure();
-
-                // Servicios de app
-                services.AddSingleton<UserSessionService>();
-                services.AddSingleton<NavigationService>();
-                services.AddSingleton<SelectedMediaService>();
                 
-                services.AddSingleton<IMediaBackend, MacMediaBackend>();
+                services.AddMediaBackendForCurrentPlatform();
 
                 // Timeline / control de reproducción
                 services.AddSingleton<PlaybackTimelineService>();
@@ -44,9 +38,6 @@ internal class Program
 
                 // ViewModels de navegación
                 services.AddTransient<LoginViewModel>();
-                services.AddTransient<LibraryViewModel>();
-                
-                services.AddSingleton<MediaPlayerViewModel>();
                 services.AddTransient<LibraryViewModel>();
             })
             .Build();

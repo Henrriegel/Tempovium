@@ -13,8 +13,10 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddTempoviumInfrastructure(this IServiceCollection services)
     {
+        TempoviumDataPaths.CopyLegacyDatabaseIfNeeded();
+
         services.AddDbContext<TempoviumDbContext>(options =>
-            options.UseSqlite("Data Source=tempovium.db"));
+            options.UseSqlite(TempoviumDataPaths.GetSqliteConnectionString()));
 
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IMediaRepository, MediaRepository>();

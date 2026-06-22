@@ -32,6 +32,22 @@ public partial class NotesPanelView : UserControl
         ViewModel.JumpToNote(note);
     }
 
+    private void EditNote_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button button)
+            return;
+
+        if (button.DataContext is not NoteItemViewModel note)
+            return;
+
+        ViewModel.StartEditNote(note);
+    }
+
+    private void CancelEdit_Click(object? sender, RoutedEventArgs e)
+    {
+        ViewModel.CancelEdit();
+    }
+
     private async void DeleteNote_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is not Button button)

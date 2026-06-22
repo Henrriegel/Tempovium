@@ -20,6 +20,12 @@ public class MediaItemConfiguration : IEntityTypeConfiguration<MediaItem>
             .IsRequired()
             .HasMaxLength(1000);
 
+        builder.Property(x => x.OriginalSourcePath)
+            .HasMaxLength(1000);
+
+        builder.Property(x => x.FileSizeBytes)
+            .IsRequired();
+
         builder.Property(x => x.FileHash)
             .IsRequired()
             .HasMaxLength(128);
