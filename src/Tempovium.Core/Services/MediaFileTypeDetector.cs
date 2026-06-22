@@ -9,7 +9,7 @@ public class MediaFileTypeDetector
     ];
 
     private static readonly string[] VideoExtensions = [
-        ".mp4", ".mov", ".m4v"
+        ".mp4", ".mov", ".m4v", ".mkv", ".avi", ".wmv", ".webm"
     ];
 
     public MediaType? DetectFromPath(string filePath)

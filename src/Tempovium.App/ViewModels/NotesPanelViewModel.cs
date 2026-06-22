@@ -54,6 +54,8 @@ public class NotesPanelViewModel : ViewModelBase
         }
     }
 
+    public string AddNoteIcon => IsEditing ? "✓" : "+";
+
     public NotesPanelViewModel(
         IMediaNoteRepository noteRepository,
         SelectedMediaService selectedMediaService,
@@ -79,6 +81,7 @@ public class NotesPanelViewModel : ViewModelBase
                 e.PropertyName == nameof(PlaybackTimelineService.PlaybackPositionSeconds))
             {
                 OnPropertyChanged(nameof(AddNoteButtonText));
+                OnPropertyChanged(nameof(AddNoteIcon));
                 UpdateActiveNote();
             }
         };
@@ -163,6 +166,7 @@ public class NotesPanelViewModel : ViewModelBase
         NewNoteContent = note.Content;
         OnPropertyChanged(nameof(IsEditing));
         OnPropertyChanged(nameof(AddNoteButtonText));
+        OnPropertyChanged(nameof(AddNoteIcon));
     }
 
     public void CancelEdit()
@@ -176,6 +180,7 @@ public class NotesPanelViewModel : ViewModelBase
         NewNoteContent = string.Empty;
         OnPropertyChanged(nameof(IsEditing));
         OnPropertyChanged(nameof(AddNoteButtonText));
+        OnPropertyChanged(nameof(AddNoteIcon));
     }
 
     public void JumpToNote(NoteItemViewModel note)

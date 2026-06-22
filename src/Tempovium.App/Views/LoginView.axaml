@@ -7,37 +7,164 @@
              x:Class="Tempovium.Views.LoginView"
              x:DataType="vm:LoginViewModel">
 
-    <StackPanel Margin="24" Spacing="12" Width="300">
+    <Grid Background="{DynamicResource AppBackgroundBrush}"
+          RowDefinitions="*,Auto,*"
+          ColumnDefinitions="*,520,*">
+        <StackPanel Grid.Row="1"
+                    Grid.Column="1"
+                    Spacing="14">
+            <Border Classes="card"
+                    Padding="28"
+                    IsVisible="{Binding IsProfileListVisible}">
+                <Grid RowDefinitions="Auto,Auto,*"
+                      RowSpacing="16">
+                    <Grid ColumnDefinitions="*,Auto"
+                          ColumnSpacing="12">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Tempovium"
+                                       Classes="h1"/>
+                            <TextBlock Text="Perfiles"
+                                       Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+                        </StackPanel>
 
-        <TextBlock Text="Tempovium"
-                   FontSize="28"
-                   FontWeight="Bold"
-                   HorizontalAlignment="Center"/>
+                        <Button Grid.Column="1"
+                                Content="+"
+                                Classes="icon primary"
+                                ToolTip.Tip="Crear perfil"
+                                AutomationProperties.Name="Crear perfil"
+                                Command="{Binding ShowCreateProfileCommand}"/>
+                    </Grid>
 
-        <TextBlock Text="Iniciar sesión"
-                   FontSize="20"
-                   HorizontalAlignment="Center"/>
+                    <TextBlock Grid.Row="1"
+                               Text="Selecciona un perfil local para continuar."
+                               Classes="caption"/>
 
-        <TextBlock Text="Usuario"/>
+                    <ListBox Grid.Row="2"
+                             Classes="clean"
+                             ItemsSource="{Binding LocalUsers}"
+                             SelectedItem="{Binding SelectedUserCard, Mode=TwoWay}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:UserCardViewModel">
+                                <Border Classes="card selectable-card"
+                                        Margin="0,0,0,10"
+                                        Padding="14">
+                                    <Grid ColumnDefinitions="Auto,*"
+                                          ColumnSpacing="12">
+                                        <Border Width="48"
+                                                Height="48"
+                                                CornerRadius="12"
+                                                ClipToBounds="True"
+                                                Background="{DynamicResource AppAccentSoftBrush}">
+                                            <Grid>
+                                                <Image Source="{Binding AvatarImage}"
+                                                       Stretch="UniformToFill"
+                                                       IsVisible="{Binding HasAvatar}"/>
+                                                <TextBlock Text="{Binding Initials}"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"
+                                                           FontWeight="Bold"
+                                                           Foreground="{DynamicResource AppAccentBrush}"
+                                                           IsVisible="{Binding HasNoAvatar}"/>
+                                            </Grid>
+                                        </Border>
 
-        <TextBox Text="{Binding Username}"
-                 Watermark="Escribe tu usuario"/>
+                                        <StackPanel Grid.Column="1"
+                                                    Spacing="2"
+                                                    VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Username}"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                                            <TextBlock Text="{Binding LastLoginText}"
+                                                       Classes="caption"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Border>
 
-        <TextBlock Text="Contraseña"/>
+            <Border Classes="card"
+                    Padding="28"
+                    IsVisible="{Binding IsCreateProfileVisible}">
+                <StackPanel Spacing="14">
+                    <Grid ColumnDefinitions="Auto,*"
+                          ColumnSpacing="10">
+                        <Button Content="←"
+                                Classes="icon"
+                                ToolTip.Tip="Volver"
+                                AutomationProperties.Name="Volver a perfiles"
+                                IsVisible="{Binding CanGoBackToProfiles}"
+                                Command="{Binding BackToProfilesCommand}"/>
 
-        <TextBox Text="{Binding Password}"
-                 PasswordChar="*"
-                 Watermark="Escribe tu contraseña"/>
+                        <StackPanel Grid.Column="1"
+                                    Spacing="4">
+                            <TextBlock Text="Crear perfil"
+                                       Classes="h1"/>
+                            <TextBlock Text="Perfil local en este equipo."
+                                       Classes="caption"/>
+                        </StackPanel>
+                    </Grid>
 
-        <Button Content="Entrar"
-                Width="120"
-                HorizontalAlignment="Center"
-                Command="{Binding LoginCommand}"/>
+                    <TextBlock Text="Nombre del perfil"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                    <TextBox Text="{Binding Username}"
+                             Watermark="Nombre visible"/>
 
-        <TextBlock Text="{Binding StatusMessage}"
-                   TextWrapping="Wrap"
-                   HorizontalAlignment="Center"/>
+                    <TextBlock Text="Avatar"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                    <Grid ColumnDefinitions="Auto,*,Auto"
+                          ColumnSpacing="12">
+                        <Border Width="56"
+                                Height="56"
+                                CornerRadius="14"
+                                ClipToBounds="True"
+                                Background="{DynamicResource AppAccentSoftBrush}">
+                            <Grid>
+                                <Image Source="{Binding SelectedAvatarImage}"
+                                       Stretch="UniformToFill"
+                                       IsVisible="{Binding HasSelectedAvatar}"/>
+                                <TextBlock Text="A"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           FontWeight="Bold"
+                                           Foreground="{DynamicResource AppAccentBrush}"
+                                           IsVisible="{Binding HasNoSelectedAvatar}"/>
+                            </Grid>
+                        </Border>
 
-    </StackPanel>
+                        <TextBlock Grid.Column="1"
+                                   Text="{Binding SelectedAvatarText}"
+                                   VerticalAlignment="Center"
+                                   Classes="caption"
+                                   TextWrapping="Wrap"/>
 
+                        <Button Grid.Column="2"
+                                Content="◉"
+                                Classes="icon"
+                                ToolTip.Tip="Elegir avatar"
+                                AutomationProperties.Name="Elegir avatar"
+                                Command="{Binding PickAvatarCommand}"/>
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto"
+                          ColumnSpacing="12">
+                        <TextBlock Text="{Binding StatusMessage}"
+                                   VerticalAlignment="Center"
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+                        <Button Grid.Column="1"
+                                Content="→"
+                                Classes="icon primary"
+                                ToolTip.Tip="Crear perfil"
+                                AutomationProperties.Name="Crear perfil"
+                                Command="{Binding CreateProfileCommand}"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </Grid>
 </UserControl>

@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Tempovium.Core.Entities;
 using Tempovium.Core.Services;
+using Tempovium.Infrastructure.Persistence;
 using Tempovium.Media.Abstractions.Backends;
 using Tempovium.Media.Abstractions.Contracts;
 using Tempovium.Media.Mac.Backends;
@@ -299,7 +300,7 @@ public class MediaPlayerViewModel : ViewModelBase
 
         HasSelectedMedia = true;
         CurrentMediaTitle = media.Title;
-        CurrentMediaPath = media.FilePath;
+        CurrentMediaPath = MediaPathDisplayFormatter.Format(media.FilePath, TempoviumDataPaths.GetManagedMediaDirectory());
         CurrentMediaType = media.MediaType.ToString();
         IsLoading = true;
         PlayerStatusText = "Cargando...";

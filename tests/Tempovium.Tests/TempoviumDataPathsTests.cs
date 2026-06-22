@@ -49,6 +49,28 @@ public class TempoviumDataPathsTests
     }
 
     [Fact]
+    public void AvatarDirectoryUsesTempoviumAppDataDirectory()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "TempoviumTests", Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            var path = TempoviumDataPaths.GetAvatarDirectory(directory);
+
+            Assert.Equal(TempoviumDataPaths.AvatarDirectoryName, Path.GetFileName(path));
+            Assert.Equal(TempoviumDataPaths.AppDirectoryName, Path.GetFileName(Path.GetDirectoryName(path)));
+            Assert.True(Directory.Exists(path));
+        }
+        finally
+        {
+            if (Directory.Exists(directory))
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public void LegacyDatabaseCopyDoesNotOverwriteExistingTarget()
     {
         var directory = Path.Combine(Path.GetTempPath(), "TempoviumTests", Guid.NewGuid().ToString("N"));

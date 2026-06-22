@@ -7,6 +7,7 @@ public static class TempoviumDataPaths
     public const string AppDirectoryName = "Tempovium";
     public const string DatabaseFileName = "tempovium.db";
     public const string ManagedMediaDirectoryName = "Media";
+    public const string AvatarDirectoryName = "Avatars";
 
     public static string GetAppDataDirectory()
     {
@@ -38,6 +39,18 @@ public static class TempoviumDataPaths
     public static string GetManagedMediaDirectory(string appDataRoot)
     {
         var path = Path.Combine(GetAppDataDirectory(appDataRoot), ManagedMediaDirectoryName);
+        Directory.CreateDirectory(path);
+        return path;
+    }
+
+    public static string GetAvatarDirectory()
+    {
+        return GetAvatarDirectory(GetAppDataRoot());
+    }
+
+    public static string GetAvatarDirectory(string appDataRoot)
+    {
+        var path = Path.Combine(GetAppDataDirectory(appDataRoot), AvatarDirectoryName);
         Directory.CreateDirectory(path);
         return path;
     }

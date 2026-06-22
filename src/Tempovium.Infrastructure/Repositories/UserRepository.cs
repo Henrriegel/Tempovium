@@ -14,6 +14,14 @@ public class UserRepository : IUserRepository
         _db = db;
     }
 
+    public async Task<List<User>> GetAllAsync()
+    {
+        return await _db.Users
+            .OrderByDescending(x => x.LastLoginAt ?? x.CreatedAt)
+            .ThenBy(x => x.Username)
+            .ToListAsync();
+    }
+
     public async Task<User?> GetByIdAsync(Guid id)
     {
         return await _db.Users

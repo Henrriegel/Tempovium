@@ -5,8 +5,12 @@
         x:Class="Tempovium.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="Tempovium"
-        Width="900"
-        Height="600">
+        Width="1200"
+        Height="760"
+        MinWidth="1040"
+        MinHeight="680"
+        SystemDecorations="None"
+        Background="{DynamicResource AppBackgroundBrush}">
 
     <Window.DataTemplates>
         <DataTemplate DataType="vm:LoginViewModel">
@@ -18,6 +22,241 @@
         </DataTemplate>
     </Window.DataTemplates>
 
-    <ContentControl Content="{Binding NavigationService.CurrentView}" />
+    <Grid RowDefinitions="34,Auto,*">
+        <Border Grid.Row="0"
+                Background="{DynamicResource AppSurfaceBrush}"
+                BorderBrush="{DynamicResource AppBorderBrush}"
+                BorderThickness="0,0,0,1"
+                PointerPressed="TitleBar_PointerPressed">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+                <Button Grid.Column="1"
+                        Content="─"
+                        Classes="icon titlebar"
+                        ToolTip.Tip="Minimizar"
+                        AutomationProperties.Name="Minimizar ventana"
+                        Click="Minimize_Click"/>
+                <Button Grid.Column="2"
+                        Content="□"
+                        Classes="icon titlebar"
+                        ToolTip.Tip="Maximizar o restaurar"
+                        AutomationProperties.Name="Maximizar o restaurar ventana"
+                        Click="MaximizeRestore_Click"/>
+                <Button Grid.Column="3"
+                        Content="×"
+                        Classes="icon titlebar danger"
+                        ToolTip.Tip="Cerrar"
+                        AutomationProperties.Name="Cerrar ventana"
+                        Click="Close_Click"/>
+            </Grid>
+        </Border>
 
+        <Border Grid.Row="1"
+                IsVisible="{Binding IsLoggedIn}"
+                Background="{DynamicResource AppSurfaceBrush}"
+                BorderBrush="{DynamicResource AppBorderBrush}"
+                BorderThickness="0,0,0,1"
+                Padding="18,12">
+            <Grid ColumnDefinitions="Auto,*,Auto"
+                  ColumnSpacing="16"
+                  VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal"
+                            Spacing="10"
+                            VerticalAlignment="Center">
+                    <Border Width="34"
+                            Height="34"
+                            CornerRadius="8"
+                            Background="{DynamicResource AppAccentBrush}">
+                        <TextBlock Text="T"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   FontWeight="Bold"
+                                   Foreground="White"/>
+                    </Border>
+
+                    <StackPanel Spacing="0">
+                        <TextBlock Text="Tempovium"
+                                   FontWeight="Bold"
+                                   Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                        <TextBlock Text="Workspace local"
+                                   Classes="caption"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1"
+                            Orientation="Horizontal"
+                            Spacing="8"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center">
+                    <Border Width="30"
+                            Height="30"
+                            CornerRadius="8"
+                            ClipToBounds="True"
+                            Background="{DynamicResource AppAccentSoftBrush}">
+                        <Grid>
+                            <Image Source="{Binding CurrentUserAvatarImage}"
+                                   Stretch="UniformToFill"
+                                   IsVisible="{Binding HasCurrentUserAvatar}"/>
+                            <TextBlock Text="{Binding CurrentUserInitials}"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       FontWeight="Bold"
+                                       Foreground="{DynamicResource AppAccentBrush}"
+                                       IsVisible="{Binding HasNoCurrentUserAvatar}"/>
+                        </Grid>
+                    </Border>
+                    <TextBlock Text="{Binding CurrentUsername, StringFormat='Perfil: {0}'}"
+                               VerticalAlignment="Center"
+                               Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2"
+                            Orientation="Horizontal"
+                            Spacing="8">
+                    <Button Content="⚙"
+                            Classes="icon"
+                            ToolTip.Tip="Configuración"
+                            AutomationProperties.Name="Abrir configuración"
+                            Command="{Binding OpenSettingsCommand}"/>
+                    <Button Content="⇄"
+                            Classes="icon"
+                            ToolTip.Tip="Cambiar perfil"
+                            AutomationProperties.Name="Cambiar perfil"
+                            Command="{Binding SwitchAccountCommand}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <ContentControl Grid.Row="2"
+                        Content="{Binding NavigationService.CurrentView}" />
+
+        <Border Grid.RowSpan="3"
+                IsVisible="{Binding IsSettingsOpen}"
+                Background="{DynamicResource AppOverlayBrush}">
+            <Grid ColumnDefinitions="*,420">
+                <Border Grid.Column="1"
+                        Classes="panel"
+                        Margin="0"
+                        Padding="24"
+                        CornerRadius="8,0,0,8">
+                    <Grid RowDefinitions="Auto,Auto,Auto,Auto,*"
+                          RowSpacing="18">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel>
+                                <TextBlock Text="Configuración"
+                                           Classes="h2"/>
+                                <TextBlock Text="Preferencias de interfaz y cuenta"
+                                           Classes="caption"/>
+                            </StackPanel>
+
+                            <Button Grid.Column="1"
+                                    Content="×"
+                                    Classes="icon"
+                                    ToolTip.Tip="Cerrar configuración"
+                                    AutomationProperties.Name="Cerrar configuración"
+                                    Command="{Binding CloseSettingsCommand}"/>
+                        </Grid>
+
+                        <Border Grid.Row="1"
+                                Classes="card">
+                            <StackPanel Spacing="10">
+                                <TextBlock Text="Tema"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                                <ComboBox Width="180"
+                                          SelectedIndex="{Binding ThemeSelectedIndex, Mode=TwoWay}"
+                                          AutomationProperties.Name="Tema">
+                                    <ComboBoxItem Content="Sistema"/>
+                                    <ComboBoxItem Content="Claro"/>
+                                    <ComboBoxItem Content="Oscuro"/>
+                                </ComboBox>
+                                <TextBlock Text="{Binding ThemeStatus}"
+                                           Classes="caption"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Grid.Row="2"
+                                Classes="card">
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="Importación y exportación"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                                <TextBlock Text="Opciones futuras para notas, paquetes y medios."
+                                           TextWrapping="Wrap"
+                                           Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Grid.Row="3"
+                                Classes="card">
+                            <StackPanel Spacing="10">
+                                <TextBlock Text="Cuenta local"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                                <Grid ColumnDefinitions="Auto,*,Auto"
+                                      ColumnSpacing="12">
+                                    <Border Width="48"
+                                            Height="48"
+                                            CornerRadius="12"
+                                            ClipToBounds="True"
+                                            Background="{DynamicResource AppAccentSoftBrush}">
+                                        <Grid>
+                                            <Image Source="{Binding CurrentUserAvatarImage}"
+                                                   Stretch="UniformToFill"
+                                                   IsVisible="{Binding HasCurrentUserAvatar}"/>
+                                            <TextBlock Text="{Binding CurrentUserInitials}"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"
+                                                       FontWeight="Bold"
+                                                       Foreground="{DynamicResource AppAccentBrush}"
+                                                       IsVisible="{Binding HasNoCurrentUserAvatar}"/>
+                                        </Grid>
+                                    </Border>
+
+                                    <StackPanel Grid.Column="1"
+                                                Spacing="2"
+                                                VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding CurrentUsername}"
+                                                   Foreground="{DynamicResource AppTextPrimaryBrush}"
+                                                   FontWeight="SemiBold"/>
+                                        <TextBlock Text="Perfil local"
+                                                   Classes="caption"/>
+                                    </StackPanel>
+
+                                    <Button Grid.Column="2"
+                                            Content="◉"
+                                            Classes="icon"
+                                            ToolTip.Tip="Cambiar avatar"
+                                            AutomationProperties.Name="Cambiar avatar"
+                                            Command="{Binding ChangeAvatarCommand}"/>
+                                </Grid>
+                                <TextBlock Text="Respaldo y restauración se agregarán en una fase posterior."
+                                           TextWrapping="Wrap"
+                                           Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Border>
+
+        <Border Grid.RowSpan="3"
+                IsVisible="{Binding IsImporting}"
+                Background="{DynamicResource AppOverlayBrush}">
+            <Border Classes="card"
+                    Width="320"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+                <StackPanel Spacing="14">
+                    <ProgressBar IsIndeterminate="True"
+                                 Height="6"/>
+                    <TextBlock Text="Importando medios"
+                               Classes="h2"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="La biblioteca se actualizará al terminar."
+                               Classes="caption"
+                               HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+        </Border>
+    </Grid>
 </Window>

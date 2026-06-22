@@ -9,85 +9,104 @@
         <converters:SecondsToTimestampConverter x:Key="SecondsToTimestampConverter"/>
     </UserControl.Resources>
 
-    <Border BorderBrush="Gray"
-            BorderThickness="1"
-            Padding="16"
-            Margin="0">
+    <Border Classes="panel"
+            Padding="18">
+        <Grid RowDefinitions="Auto,Auto,Auto,*"
+              RowSpacing="12">
+            <StackPanel Spacing="3">
+                <TextBlock Text="Notas"
+                           Classes="h2"/>
+                <TextBlock Text="Notas sincronizadas con el momento del medio."
+                           Classes="caption"/>
+            </StackPanel>
 
-        <StackPanel Spacing="10">
-
-            <TextBlock Text="Notas sincronizadas"
-                       FontSize="16"
-                       FontWeight="Bold"/>
-
-            <TextBox Text="{Binding NewNoteContent}"
+            <TextBox Grid.Row="1"
+                     Text="{Binding NewNoteContent}"
                      Watermark="Escribe una nota para el segundo actual..."
                      AcceptsReturn="True"
                      TextWrapping="Wrap"
-                     MinHeight="60"/>
+                     MinHeight="74"/>
 
-            <StackPanel Orientation="Horizontal"
+            <StackPanel Grid.Row="2"
+                        Orientation="Horizontal"
                         Spacing="8">
-                <Button Content="{Binding AddNoteButtonText}"
-                        HorizontalAlignment="Left"
+                <TextBlock Text="{Binding AddNoteButtonText}"
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+
+                <Button Content="{Binding AddNoteIcon}"
+                        Classes="icon primary"
+                        ToolTip.Tip="{Binding AddNoteButtonText}"
+                        AutomationProperties.Name="{Binding AddNoteButtonText}"
                         Click="AddNote_Click"/>
 
-                <Button Content="Cancelar edición"
-                        HorizontalAlignment="Left"
+                <Button Content="X"
+                        Classes="icon"
+                        ToolTip.Tip="Cancelar edición"
+                        AutomationProperties.Name="Cancelar edición"
                         IsVisible="{Binding IsEditing}"
                         Click="CancelEdit_Click"/>
             </StackPanel>
 
-            <Separator/>
-
-            <ScrollViewer VerticalScrollBarVisibility="Auto"
-                          MaxHeight="220">
-
+            <ScrollViewer Grid.Row="3"
+                          VerticalScrollBarVisibility="Auto"
+                          MaxHeight="260">
                 <ItemsControl ItemsSource="{Binding Notes}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="localvm:NoteItemViewModel">
-                            <Border BorderThickness="1"
-                                    Padding="10"
-                                    Margin="0,0,0,8"
-                                    BorderBrush="LightGray">
-                                <StackPanel Spacing="6">
-                                    <TextBlock Text="Nota activa"
-                                               FontWeight="Bold"
-                                               IsVisible="{Binding IsActive}"/>
-
+                            <Border Classes="card"
+                                    Margin="0,0,0,10"
+                                    Padding="12">
+                                <Grid RowDefinitions="Auto,Auto"
+                                      RowSpacing="8">
                                     <Grid ColumnDefinitions="Auto,*,Auto,Auto"
-                                          ColumnSpacing="10">
-                                        <Button Content="{Binding TimestampSeconds, Converter={StaticResource SecondsToTimestampConverter}}"
-                                                Click="JumpToNote_Click"
-                                                HorizontalAlignment="Left"
-                                                VerticalAlignment="Top"/>
+                                          ColumnSpacing="8">
+                                        <StackPanel Orientation="Horizontal"
+                                                    Spacing="6"
+                                                    VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding TimestampSeconds, Converter={StaticResource SecondsToTimestampConverter}}"
+                                                       Classes="caption"
+                                                       VerticalAlignment="Center"/>
+                                            <Button Content="↗"
+                                                    Classes="icon"
+                                                    ToolTip.Tip="Ir a esta nota"
+                                                    AutomationProperties.Name="Ir a esta nota"
+                                                    Click="JumpToNote_Click"/>
+                                        </StackPanel>
 
                                         <TextBlock Grid.Column="1"
-                                                   Text="{Binding Content}"
-                                                   TextWrapping="Wrap"
+                                                   Text="Nota activa"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource AppAccentBrush}"
+                                                   IsVisible="{Binding IsActive}"
                                                    VerticalAlignment="Center"/>
 
                                         <Button Grid.Column="2"
-                                                Content="Editar"
-                                                Click="EditNote_Click"
-                                                HorizontalAlignment="Right"
-                                                VerticalAlignment="Top"/>
+                                                Content="✎"
+                                                Classes="icon"
+                                                ToolTip.Tip="Editar nota"
+                                                AutomationProperties.Name="Editar nota"
+                                                Click="EditNote_Click"/>
 
                                         <Button Grid.Column="3"
-                                                Content="Eliminar"
-                                                Click="DeleteNote_Click"
-                                                HorizontalAlignment="Right"
-                                                VerticalAlignment="Top"/>
+                                                Content="×"
+                                                Classes="icon danger"
+                                                ToolTip.Tip="Eliminar nota"
+                                                AutomationProperties.Name="Eliminar nota"
+                                                Foreground="{DynamicResource AppDangerBrush}"
+                                                Click="DeleteNote_Click"/>
                                     </Grid>
-                                </StackPanel>
+
+                                    <TextBlock Grid.Row="1"
+                                               Text="{Binding Content}"
+                                               TextWrapping="Wrap"
+                                               Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                                </Grid>
                             </Border>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
-
             </ScrollViewer>
-
-        </StackPanel>
-
+        </Grid>
     </Border>
 </UserControl>

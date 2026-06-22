@@ -30,6 +30,7 @@ internal class Program
                 // Timeline / control de reproducción
                 services.AddSingleton<PlaybackTimelineService>();
                 services.AddSingleton<PlaybackControlService>();
+                services.AddSingleton<UiSettingsStore>();
 
                 // ViewModels persistentes
                 services.AddSingleton<MainWindowViewModel>();

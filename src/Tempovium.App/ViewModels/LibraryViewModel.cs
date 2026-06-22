@@ -10,6 +10,7 @@ using Tempovium.Core.Entities;
 using Tempovium.Core.Interfaces;
 using Tempovium.Core.Models;
 using Tempovium.Core.Services;
+using Tempovium.Infrastructure.Persistence;
 using Tempovium.Services;
 
 namespace Tempovium.ViewModels;
@@ -20,30 +21,34 @@ public class LibraryViewModel : ViewModelBase
     private readonly IMediaImportService _mediaImportService;
     private readonly UserSessionService _userSessionService;
     private readonly SelectedMediaService _selectedMediaService;
-    
-    public MediaPlayerViewModel MediaPlayerViewModel { get; }
+    private readonly MainWindowViewModel _shellViewModel;
 
     private List<MediaItem> _mediaItems = new();
     private string _statusMessage = string.Empty;
     private MediaItem? _selectedMedia;
+    private bool _isImporting;
 
     public LibraryViewModel(
         IMediaRepository mediaRepository,
         IMediaImportService mediaImportService,
         UserSessionService userSessionService,
         SelectedMediaService selectedMediaService,
-        MediaPlayerViewModel mediaPlayerViewModel)
+        MediaPlayerViewModel mediaPlayerViewModel,
+        MainWindowViewModel shellViewModel)
     {
         _mediaRepository = mediaRepository;
         _mediaImportService = mediaImportService;
         _userSessionService = userSessionService;
         _selectedMediaService = selectedMediaService;
         MediaPlayerViewModel = mediaPlayerViewModel;
+        _shellViewModel = shellViewModel;
 
         ImportFolderCommand = new SimpleCommand(ExecuteImportFolder);
         ImportFileCommand = new SimpleCommand(ExecuteImportFile);
         _ = LoadLibraryAsync();
     }
+
+    public MediaPlayerViewModel MediaPlayerViewModel { get; }
 
     public List<MediaItem> MediaItems
     {
@@ -66,17 +71,13 @@ public class LibraryViewModel : ViewModelBase
             {
                 if (value is not null)
                 {
-                    // Importante:
-                    // aquí ya NO llamamos a _playbackService.Play(...)
-                    // porque ahora el reproductor embebido en MediaPlayerView
-                    // es quien observa SelectedMediaService y carga el medio.
                     _selectedMediaService.SelectedMedia = value;
                 }
 
                 OnPropertyChanged(nameof(HasSelectedMedia));
                 OnPropertyChanged(nameof(HasNoSelectedMedia));
                 OnPropertyChanged(nameof(SelectedMediaTitle));
-                OnPropertyChanged(nameof(SelectedMediaFolderPath));
+                OnPropertyChanged(nameof(SelectedMediaLocationDisplay));
             }
         }
     }
@@ -86,10 +87,24 @@ public class LibraryViewModel : ViewModelBase
 
     public string SelectedMediaTitle => SelectedMedia?.Title ?? string.Empty;
 
-    public string SelectedMediaFolderPath =>
-        SelectedMedia is null
-            ? string.Empty
-            : Path.GetDirectoryName(SelectedMedia.FilePath) ?? string.Empty;
+    public string SelectedMediaLocationDisplay => SelectedMedia is null
+        ? string.Empty
+        : MediaPathDisplayFormatter.Format(SelectedMedia.FilePath, TempoviumDataPaths.GetManagedMediaDirectory());
+
+    public bool IsImporting
+    {
+        get => _isImporting;
+        private set
+        {
+            if (SetProperty(ref _isImporting, value))
+            {
+                OnPropertyChanged(nameof(CanImport));
+                _shellViewModel.SetImporting(value);
+            }
+        }
+    }
+
+    public bool CanImport => !IsImporting;
 
     public ICommand ImportFolderCommand { get; }
     public ICommand ImportFileCommand { get; }
@@ -97,26 +112,28 @@ public class LibraryViewModel : ViewModelBase
     private async Task LoadLibraryAsync()
     {
         if (!_userSessionService.IsLoggedIn)
+        {
             return;
+        }
 
         var user = _userSessionService.CurrentUser!;
-        var media = await _mediaRepository.GetByUserAsync(user.Id);
-        MediaItems = media;
+        MediaItems = await _mediaRepository.GetByUserAsync(user.Id);
     }
 
     private async void ExecuteImportFolder()
     {
+        if (IsImporting)
+        {
+            return;
+        }
+
         if (!_userSessionService.IsLoggedIn)
         {
             StatusMessage = "No hay un usuario con sesión activa.";
             return;
         }
 
-        var topLevel = TopLevel.GetTopLevel(
-            Application.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop
-                ? desktop.MainWindow
-                : null);
-
+        var topLevel = GetTopLevel();
         if (topLevel == null)
         {
             StatusMessage = "No se pudo acceder a la ventana principal.";
@@ -143,26 +160,37 @@ public class LibraryViewModel : ViewModelBase
         }
 
         var user = _userSessionService.CurrentUser!;
-        var importResult = await _mediaImportService.ImportFolderAsync(user.Id, folderPath);
-
-        await LoadLibraryAsync();
-
-        StatusMessage = FormatImportSummary(importResult);
+        IsImporting = true;
+        try
+        {
+            var importResult = await _mediaImportService.ImportFolderAsync(user.Id, folderPath);
+            await LoadLibraryAsync();
+            StatusMessage = FormatImportSummary(importResult);
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error durante la importación: {ex.Message}";
+        }
+        finally
+        {
+            IsImporting = false;
+        }
     }
 
     private async void ExecuteImportFile()
     {
+        if (IsImporting)
+        {
+            return;
+        }
+
         if (!_userSessionService.IsLoggedIn)
         {
             StatusMessage = "No hay un usuario con sesión activa.";
             return;
         }
 
-        var topLevel = TopLevel.GetTopLevel(
-            Application.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop
-                ? desktop.MainWindow
-                : null);
-
+        var topLevel = GetTopLevel();
         if (topLevel == null)
         {
             StatusMessage = "No se pudo acceder a la ventana principal.";
@@ -190,11 +218,29 @@ public class LibraryViewModel : ViewModelBase
         }
 
         var user = _userSessionService.CurrentUser!;
-        var importResult = await _mediaImportService.ImportFileAsync(user.Id, filePath);
+        IsImporting = true;
+        try
+        {
+            var importResult = await _mediaImportService.ImportFileAsync(user.Id, filePath);
+            await LoadLibraryAsync();
+            StatusMessage = FormatImportSummary(importResult);
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error durante la importación: {ex.Message}";
+        }
+        finally
+        {
+            IsImporting = false;
+        }
+    }
 
-        await LoadLibraryAsync();
-
-        StatusMessage = FormatImportSummary(importResult);
+    private static TopLevel? GetTopLevel()
+    {
+        return TopLevel.GetTopLevel(
+            Application.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop
+                ? desktop.MainWindow
+                : null);
     }
 
     private static string FormatImportSummary(MediaImportResult result)

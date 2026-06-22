@@ -1,116 +1,134 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Tempovium.ViewModels"
+             xmlns:entities="using:Tempovium.Core.Entities"
              xmlns:controls="using:Tempovium.Controls"
+             xmlns:converters="using:Tempovium.Converters"
              x:Class="Tempovium.Views.LibraryView"
              x:DataType="vm:LibraryViewModel">
 
-  <Grid Margin="20"
-        RowDefinitions="Auto,Auto,*"
-        ColumnDefinitions="2*,3*"
-        ColumnSpacing="16"
-        RowSpacing="12">
+    <UserControl.Resources>
+        <converters:MediaPathDisplayConverter x:Key="MediaPathDisplayConverter"/>
+    </UserControl.Resources>
 
-    <!-- Encabezado -->
-    <StackPanel Grid.Row="0"
-                Grid.Column="0"
-                Grid.ColumnSpan="2"
-                Orientation="Horizontal"
-                Spacing="10">
-      <TextBlock Text="Biblioteca"
-                 FontSize="28"
-                 FontWeight="Bold"/>
-      <Button Content="Importar archivo"
-              Command="{Binding ImportFileCommand}"/>
-      <Button Content="Importar carpeta"
-              Command="{Binding ImportFolderCommand}"/>
-    </StackPanel>
+    <Grid Background="{DynamicResource AppBackgroundBrush}"
+          RowDefinitions="Auto,*"
+          RowSpacing="16"
+          Margin="18">
 
-    <!-- Mensaje de estado -->
-    <TextBlock Grid.Row="1"
-               Grid.Column="0"
-               Grid.ColumnSpan="2"
-               Text="{Binding StatusMessage}"
-               TextWrapping="Wrap"/>
-
-    <!-- Lista izquierda -->
-    <Border Grid.Row="2"
-            Grid.Column="0"
-            BorderBrush="Gray"
-            BorderThickness="1"
-            Padding="8">
-      <ListBox ItemsSource="{Binding MediaItems}"
-               SelectedItem="{Binding SelectedMedia, Mode=TwoWay}">
-        <ListBox.ItemTemplate>
-          <DataTemplate>
-            <Border BorderBrush="Gray"
-                    BorderThickness="1"
-                    Padding="10"
-                    Margin="4">
-              <StackPanel>
-                <TextBlock Text="{Binding Title}"
-                           FontWeight="Bold"/>
-                <TextBlock Text="{Binding FilePath}"
-                           FontSize="12"
-                           TextWrapping="Wrap"/>
-              </StackPanel>
-            </Border>
-          </DataTemplate>
-        </ListBox.ItemTemplate>
-      </ListBox>
-    </Border>
-
-    <!-- Panel derecho -->
-    <Border Grid.Row="2"
-            Grid.Column="1"
-            BorderBrush="Gray"
-            BorderThickness="1"
-            Padding="12">
-      <Grid>
-
-        <!-- Estado vacío -->
-        <StackPanel IsVisible="{Binding HasNoSelectedMedia}"
-                    VerticalAlignment="Center"
-                    HorizontalAlignment="Center"
-                    Spacing="10">
-          <TextBlock Text="Selecciona un medio de la biblioteca para comenzar."
-                     FontSize="14"
-                     Opacity="0.7"
-                     TextWrapping="Wrap"/>
-        </StackPanel>
-
-        <!-- Estado con selección -->
-        <ScrollViewer IsVisible="{Binding HasSelectedMedia}"
-                      VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Disabled">
-          <Grid RowDefinitions="Auto,*,Auto"
-                RowSpacing="12">
-
-            <!-- Encabezado del medio seleccionado -->
-            <StackPanel Grid.Row="0"
-                        Spacing="4">
-              <TextBlock Text="{Binding SelectedMediaTitle}"
-                         FontSize="22"
-                         FontWeight="Bold"
-                         TextWrapping="Wrap"/>
-
-              <TextBlock Text="{Binding SelectedMediaFolderPath}"
-                         Opacity="0.75"
-                         TextWrapping="Wrap"/>
+        <Grid ColumnDefinitions="*,Auto"
+              ColumnSpacing="16">
+            <StackPanel Spacing="3">
+                <TextBlock Text="Biblioteca"
+                           Classes="h1"/>
+                <TextBlock Text="{Binding StatusMessage}"
+                           TextWrapping="Wrap"
+                           Foreground="{DynamicResource AppTextSecondaryBrush}"/>
             </StackPanel>
 
-            <!-- Reproductor -->
-            <controls:MediaPlayerView Grid.Row="1"
-                                      DataContext="{Binding MediaPlayerViewModel}"/>
+            <StackPanel Grid.Column="1"
+                        Orientation="Horizontal"
+                        Spacing="8"
+                        VerticalAlignment="Top">
+                <Button Content="⇧"
+                        Classes="icon primary"
+                        ToolTip.Tip="Importar archivo"
+                        AutomationProperties.Name="Importar archivo"
+                        IsEnabled="{Binding CanImport}"
+                        Command="{Binding ImportFileCommand}"/>
+                <Button Content="⊞"
+                        Classes="icon"
+                        ToolTip.Tip="Importar carpeta"
+                        AutomationProperties.Name="Importar carpeta"
+                        IsEnabled="{Binding CanImport}"
+                        Command="{Binding ImportFolderCommand}"/>
+            </StackPanel>
+        </Grid>
 
-            <!-- Notas -->
-            <controls:NotesPanelView Grid.Row="2"/>
+        <Grid Grid.Row="1"
+              ColumnDefinitions="360,*"
+              ColumnSpacing="16">
+            <Border Classes="panel"
+                    Padding="14">
+                <Grid RowDefinitions="Auto,*"
+                      RowSpacing="12">
+                    <TextBlock Text="Medios"
+                               Classes="h2"/>
 
-          </Grid>
-        </ScrollViewer>
+                    <ListBox Grid.Row="1"
+                             Classes="clean"
+                             ItemsSource="{Binding MediaItems}"
+                             SelectedItem="{Binding SelectedMedia, Mode=TwoWay}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="entities:MediaItem">
+                                <Border Classes="card selectable-card"
+                                        Margin="0,0,0,10"
+                                        Padding="13">
+                                    <StackPanel Spacing="6">
+                                        <Grid ColumnDefinitions="*,Auto"
+                                              ColumnSpacing="10">
+                                            <TextBlock Text="{Binding Title}"
+                                                       FontWeight="SemiBold"
+                                                       TextWrapping="Wrap"
+                                                       Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding MediaType}"
+                                                       Classes="caption"/>
+                                        </Grid>
 
-      </Grid>
-    </Border>
+                                        <TextBlock Text="{Binding FilePath, Converter={StaticResource MediaPathDisplayConverter}}"
+                                                   Classes="caption"
+                                                   TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Border>
 
-  </Grid>
+            <Grid Grid.Column="1">
+                <Border Classes="panel"
+                        Padding="22"
+                        IsVisible="{Binding HasNoSelectedMedia}">
+                    <StackPanel HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Spacing="8">
+                        <TextBlock Text="Selecciona un medio"
+                                   Classes="h2"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock Text="El reproductor y las notas aparecerán aquí."
+                                   Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                   HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+
+                <Grid IsVisible="{Binding HasSelectedMedia}"
+                      RowDefinitions="Auto,*,Auto"
+                      RowSpacing="14">
+                    <Border Classes="card"
+                            Padding="16">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="{Binding SelectedMediaTitle}"
+                                       Classes="h2"
+                                       TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding SelectedMediaLocationDisplay}"
+                                       Classes="caption"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+
+                    <ScrollViewer Grid.Row="1"
+                                  VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled">
+                        <Grid RowDefinitions="Auto,Auto"
+                              RowSpacing="14">
+                            <controls:MediaPlayerView DataContext="{Binding MediaPlayerViewModel}"/>
+                            <controls:NotesPanelView Grid.Row="1"/>
+                        </Grid>
+                    </ScrollViewer>
+                </Grid>
+            </Grid>
+        </Grid>
+    </Grid>
 </UserControl>

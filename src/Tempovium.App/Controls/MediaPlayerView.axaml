@@ -5,238 +5,159 @@
     xmlns:vm="using:Tempovium.ViewModels"
     x:DataType="vm:MediaPlayerViewModel">
 
-    <Border BorderBrush="White" BorderThickness="1" Padding="12">
-        <StackPanel Spacing="12">
+    <Border Classes="panel"
+            Padding="18">
+        <Grid RowDefinitions="Auto,Auto,*"
+              RowSpacing="14">
+            <Grid ColumnDefinitions="*,Auto"
+                  ColumnSpacing="14">
+                <StackPanel Spacing="4">
+                    <TextBlock Text="{Binding CurrentMediaTitle}"
+                               Classes="h2"
+                               TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding CurrentMediaPath}"
+                               Classes="caption"
+                               TextWrapping="Wrap"/>
+                </StackPanel>
 
-            <StackPanel Spacing="2">
-                <TextBlock
-                    FontSize="18"
-                    FontWeight="Bold"
-                    Text="{Binding CurrentMediaTitle}" />
+                <Border Grid.Column="1"
+                        Background="{DynamicResource AppCardMutedBrush}"
+                        CornerRadius="8"
+                        Padding="10,6"
+                        VerticalAlignment="Top">
+                    <TextBlock Text="{Binding CurrentMediaType}"
+                               Classes="caption"/>
+                </Border>
+            </Grid>
 
-                <TextBlock
-                    Opacity="0.85"
-                    Text="{Binding CurrentMediaPath}"
-                    TextWrapping="Wrap" />
+            <TextBlock Grid.Row="1"
+                       Text="{Binding BackendStatus}"
+                       Classes="caption"/>
 
-                <TextBlock
-                    Opacity="0.75"
-                    Text="{Binding CurrentMediaType}" />
-            </StackPanel>
-
-            <TextBlock
-                FontSize="12"
-                Opacity="0.7"
-                Text="{Binding BackendStatus}" />
-
-            <Border BorderBrush="White" BorderThickness="1" Padding="16">
-                <StackPanel Spacing="12">
-                    <TextBlock
-                        FontSize="16"
-                        FontWeight="Bold"
-                        Text="Panel de reproducción" />
-
-                    <Border
-                        Height="320"
-                        BorderBrush="White"
-                        BorderThickness="1"
+            <Grid Grid.Row="2">
+                <Border Height="300"
+                        Classes="card"
+                        Background="{DynamicResource AppCardMutedBrush}"
                         IsVisible="{Binding HasNoSelectedMedia}">
-                        <Grid>
-                            <TextBlock
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Opacity="0.7"
-                                Text="Selecciona un medio para comenzar." />
-                        </Grid>
-                    </Border>
+                    <TextBlock HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               Text="Selecciona un medio para comenzar."
+                               Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+                </Border>
 
-                    <Border
-                        Height="320"
-                        BorderBrush="White"
-                        BorderThickness="1"
+                <Border Height="360"
+                        Classes="card"
+                        Padding="0"
                         IsVisible="{Binding ShowNativeVideoHost}">
-                        <Grid>
-                            <ContentControl x:Name="NativeVideoHostContainer" />
+                    <Grid>
+                        <ContentControl x:Name="NativeVideoHostContainer" />
 
-                            <Border
-                                Background="#99000000"
+                        <Border Background="{DynamicResource AppOverlayBrush}"
                                 IsVisible="{Binding IsLoading}">
-                                <Grid
-                                    RowDefinitions="Auto,Auto"
-                                    RowSpacing="10"
-                                    HorizontalAlignment="Center"
-                                    VerticalAlignment="Center">
-
-                                    <ProgressBar
-                                        Width="220"
-                                        IsIndeterminate="True" />
-
-                                    <TextBlock
-                                        Grid.Row="1"
+                            <StackPanel Width="260"
                                         HorizontalAlignment="Center"
-                                        Text="{Binding PlayerStatusText}" />
-                                </Grid>
-                            </Border>
-                        </Grid>
-                    </Border>
+                                        VerticalAlignment="Center"
+                                        Spacing="10">
+                                <ProgressBar IsIndeterminate="True"
+                                             Height="6"/>
+                                <TextBlock Text="{Binding PlayerStatusText}"
+                                           HorizontalAlignment="Center"
+                                           Foreground="White"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </Border>
 
-                    <Border
-                        Height="320"
-                        BorderBrush="White"
-                        BorderThickness="1"
+                <Border Height="300"
+                        Classes="card"
+                        Background="{DynamicResource AppCardMutedBrush}"
                         IsVisible="{Binding ShowUnsupportedPlaybackPlaceholder}">
-                        <Grid
-                            RowDefinitions="Auto,Auto"
-                            RowSpacing="8"
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center">
-                            <TextBlock
+                    <StackPanel Spacing="8"
                                 HorizontalAlignment="Center"
-                                FontSize="16"
-                                FontWeight="Bold"
-                                Text="Reproduccion no disponible en esta plataforma." />
+                                VerticalAlignment="Center">
+                        <TextBlock Text="Reproducción no disponible"
+                                   Classes="h2"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock Text="{Binding UnsupportedPlaybackMessage}"
+                                   Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                   TextWrapping="Wrap"
+                                   HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
 
-                            <TextBlock
-                                Grid.Row="1"
-                                HorizontalAlignment="Center"
-                                Opacity="0.75"
-                                Text="{Binding UnsupportedPlaybackMessage}" />
-                        </Grid>
-                    </Border>
-
-                    <Border
-                        Height="360"
-                        BorderBrush="White"
-                        BorderThickness="1"
+                <Border Classes="card"
+                        Background="{DynamicResource AppCardMutedBrush}"
                         IsVisible="{Binding ShowAudioTransportControls}">
-                        <Grid
-                            Margin="20"
-                            RowDefinitions="Auto,Auto,Auto,*,Auto"
-                            RowSpacing="16">
+                    <Grid RowDefinitions="Auto,Auto,Auto"
+                          RowSpacing="18">
+                        <StackPanel Spacing="8"
+                                    HorizontalAlignment="Center">
+                            <TextBlock Text="Audio"
+                                       Classes="h2"
+                                       HorizontalAlignment="Center"/>
+                            <StackPanel Orientation="Horizontal"
+                                        Spacing="7"
+                                        HorizontalAlignment="Center">
+                                <Border Width="10" Height="34" Background="{DynamicResource AppAccentBrush}" CornerRadius="6"/>
+                                <Border Width="10" Height="62" Background="{DynamicResource AppAccentBrush}" CornerRadius="6"/>
+                                <Border Width="10" Height="44" Background="{DynamicResource AppAccentBrush}" CornerRadius="6"/>
+                                <Border Width="10" Height="76" Background="{DynamicResource AppAccentBrush}" CornerRadius="6"/>
+                                <Border Width="10" Height="50" Background="{DynamicResource AppAccentBrush}" CornerRadius="6"/>
+                                <Border Width="10" Height="68" Background="{DynamicResource AppAccentBrush}" CornerRadius="6"/>
+                                <Border Width="10" Height="38" Background="{DynamicResource AppAccentBrush}" CornerRadius="6"/>
+                            </StackPanel>
+                            <TextBlock Text="{Binding PlayerStatusText}"
+                                       Classes="caption"
+                                       HorizontalAlignment="Center"/>
+                        </StackPanel>
 
-                            <TextBlock
-                                Grid.Row="0"
-                                HorizontalAlignment="Center"
-                                Margin="0,6,0,0"
-                                FontSize="56"
-                                Text="♪" />
-
-                            <Border
-                                Grid.Row="1"
-                                Width="340"
-                                Height="110"
-                                HorizontalAlignment="Center"
-                                Padding="18,14"
-                                CornerRadius="18"
-                                BorderBrush="#55FFFFFF"
-                                BorderThickness="1">
-                                <StackPanel
+                        <StackPanel Grid.Row="1"
                                     Orientation="Horizontal"
                                     HorizontalAlignment="Center"
-                                    VerticalAlignment="Center"
-                                    Spacing="8">
+                                    Spacing="10">
+                            <Button Width="100"
+                                    Content="▶"
+                                    Classes="icon primary"
+                                    ToolTip.Tip="Reproducir"
+                                    AutomationProperties.Name="Reproducir"
+                                    Command="{Binding PlayCommand}"
+                                    IsVisible="{Binding IsPaused}"/>
+                            <Button Width="100"
+                                    Content="Ⅱ"
+                                    Classes="icon"
+                                    ToolTip.Tip="Pausar"
+                                    AutomationProperties.Name="Pausar"
+                                    Command="{Binding PauseCommand}"
+                                    IsVisible="{Binding IsPlaying}"/>
+                        </StackPanel>
 
-                                    <Border Width="12" Height="44" Background="White" CornerRadius="12" Opacity="0.85"/>
-                                    <Border Width="12" Height="68" Background="White" CornerRadius="12" Opacity="0.85"/>
-                                    <Border Width="12" Height="34" Background="White" CornerRadius="12" Opacity="0.85"/>
-                                    <Border Width="12" Height="82" Background="White" CornerRadius="12" Opacity="0.85"/>
-                                    <Border Width="12" Height="56" Background="White" CornerRadius="12" Opacity="0.85"/>
-                                    <Border Width="12" Height="78" Background="White" CornerRadius="12" Opacity="0.85"/>
-                                    <Border Width="12" Height="40" Background="White" CornerRadius="12" Opacity="0.85"/>
-                                    <Border Width="12" Height="64" Background="White" CornerRadius="12" Opacity="0.85"/>
-                                    <Border Width="12" Height="50" Background="White" CornerRadius="12" Opacity="0.85"/>
-                                </StackPanel>
-                            </Border>
+                        <Grid Grid.Row="2"
+                              ColumnDefinitions="Auto,*,Auto"
+                              ColumnSpacing="12"
+                              VerticalAlignment="Center">
+                            <TextBlock Text="{Binding PositionSeconds, StringFormat='{}{0:F1}s'}"
+                                       Classes="caption"
+                                       MinWidth="56"
+                                       VerticalAlignment="Center"/>
 
-                            <TextBlock
-                                Grid.Row="2"
-                                HorizontalAlignment="Center"
-                                Text="{Binding PlayerStatusText}" />
+                            <Slider x:Name="TimelineSlider"
+                                    Grid.Column="1"
+                                    Minimum="0"
+                                    Maximum="{Binding DurationSeconds, Mode=OneWay}"
+                                    Value="{Binding PositionSeconds, Mode=OneWay}"
+                                    PointerReleased="OnTimelineSliderPointerReleased"
+                                    VerticalAlignment="Center"/>
 
-                            <StackPanel
-                                Grid.Row="3"
-                                Orientation="Horizontal"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Top"
-                                Spacing="12">
-
-                                <Button
-                                    Width="90"
-                                    Content="Play"
-                                    Command="{Binding PlayCommand}" />
-
-                                <Button
-                                    Width="90"
-                                    Content="Pause"
-                                    Command="{Binding PauseCommand}" />
-                            </StackPanel>
-
-                            <Border
-                                Grid.Row="4"
-                                Margin="0,4,0,0"
-                                Padding="0,10,0,0">
-                                <Grid
-                                    RowDefinitions="Auto,Auto"
-                                    RowSpacing="10">
-
-                                    <TextBlock
-                                        Grid.Row="0"
-                                        HorizontalAlignment="Center"
-                                        FontSize="16"
-                                        FontWeight="Bold"
-                                        Text="Timeline" />
-
-                                    <Grid
-                                        Grid.Row="1"
-                                        ColumnDefinitions="Auto,Auto,*,Auto"
-                                        ColumnSpacing="12"
-                                        VerticalAlignment="Center">
-
-                                        <Button
-                                            Width="90"
-                                            Content="Play"
-                                            Command="{Binding PlayCommand}"
-                                            IsVisible="{Binding IsPaused}"
-                                            VerticalAlignment="Center" />
-
-                                        <Button
-                                            Width="90"
-                                            Content="Pause"
-                                            Command="{Binding PauseCommand}"
-                                            IsVisible="{Binding IsPlaying}"
-                                            VerticalAlignment="Center" />
-
-                                        <TextBlock
-                                            Grid.Column="1"
-                                            MinWidth="95"
-                                            VerticalAlignment="Center"
-                                            HorizontalAlignment="Left"
-                                            Opacity="0.75"
-                                            Text="{Binding PositionSeconds, StringFormat='Posición: {0:F2}s'}" />
-
-                                        <Slider
-                                            x:Name="TimelineSlider"
-                                            Grid.Column="2"
-                                            Minimum="0"
-                                            Maximum="{Binding DurationSeconds, Mode=OneWay}"
-                                            Value="{Binding PositionSeconds, Mode=OneWay}"
-                                            PointerReleased="OnTimelineSliderPointerReleased"
-                                            VerticalAlignment="Center" />
-
-                                        <TextBlock
-                                            Grid.Column="3"
-                                            MinWidth="110"
-                                            VerticalAlignment="Center"
-                                            HorizontalAlignment="Right"
-                                            Opacity="0.75"
-                                            Text="{Binding DurationSeconds, StringFormat='Duración: {0:F2}s'}" />
-                                    </Grid>
-                                </Grid>
-                            </Border>
+                            <TextBlock Grid.Column="2"
+                                       Text="{Binding DurationSeconds, StringFormat='{}{0:F1}s'}"
+                                       Classes="caption"
+                                       MinWidth="56"
+                                       TextAlignment="Right"
+                                       VerticalAlignment="Center"/>
                         </Grid>
-                    </Border>
-                </StackPanel>
-            </Border>
-        </StackPanel>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
     </Border>
 </UserControl>

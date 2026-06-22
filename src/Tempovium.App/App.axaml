@@ -5,11 +5,147 @@
              RequestedThemeVariant="Default">
              <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
 
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="AppBackgroundBrush" Color="#F4F7FB"/>
+                    <SolidColorBrush x:Key="AppSurfaceBrush" Color="#FFFFFF"/>
+                    <SolidColorBrush x:Key="AppCardBrush" Color="#FFFFFF"/>
+                    <SolidColorBrush x:Key="AppCardMutedBrush" Color="#EEF3F8"/>
+                    <SolidColorBrush x:Key="AppBorderBrush" Color="#D9E2EC"/>
+                    <SolidColorBrush x:Key="AppTextPrimaryBrush" Color="#17212B"/>
+                    <SolidColorBrush x:Key="AppTextSecondaryBrush" Color="#5B6876"/>
+                    <SolidColorBrush x:Key="AppAccentBrush" Color="#2563EB"/>
+                    <SolidColorBrush x:Key="AppAccentSoftBrush" Color="#DBEAFE"/>
+                    <SolidColorBrush x:Key="AppDangerBrush" Color="#B42318"/>
+                    <SolidColorBrush x:Key="AppOverlayBrush" Color="#990F172A"/>
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="AppBackgroundBrush" Color="#101418"/>
+                    <SolidColorBrush x:Key="AppSurfaceBrush" Color="#151B22"/>
+                    <SolidColorBrush x:Key="AppCardBrush" Color="#1B232C"/>
+                    <SolidColorBrush x:Key="AppCardMutedBrush" Color="#222C36"/>
+                    <SolidColorBrush x:Key="AppBorderBrush" Color="#334150"/>
+                    <SolidColorBrush x:Key="AppTextPrimaryBrush" Color="#F5F7FA"/>
+                    <SolidColorBrush x:Key="AppTextSecondaryBrush" Color="#B5C0CB"/>
+                    <SolidColorBrush x:Key="AppAccentBrush" Color="#60A5FA"/>
+                    <SolidColorBrush x:Key="AppAccentSoftBrush" Color="#1D3B5F"/>
+                    <SolidColorBrush x:Key="AppDangerBrush" Color="#F97066"/>
+                    <SolidColorBrush x:Key="AppOverlayBrush" Color="#B0000000"/>
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+
     <Application.DataTemplates>
         <local:ViewLocator/>
     </Application.DataTemplates>
   
     <Application.Styles>
         <FluentTheme />
+        <Style Selector="TextBlock.h1">
+            <Setter Property="FontSize" Value="30"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
+        </Style>
+        <Style Selector="TextBlock.h2">
+            <Setter Property="FontSize" Value="20"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
+        </Style>
+        <Style Selector="TextBlock.caption">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}"/>
+        </Style>
+        <Style Selector="Border.card">
+            <Setter Property="Background" Value="{DynamicResource AppCardBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16"/>
+        </Style>
+        <Style Selector="Border.panel">
+            <Setter Property="Background" Value="{DynamicResource AppSurfaceBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+        </Style>
+        <Style Selector="Button.primary">
+            <Setter Property="Background" Value="{DynamicResource AppAccentBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+        </Style>
+        <Style Selector="Button.ghost">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
+        </Style>
+        <Style Selector="Button.icon">
+            <Setter Property="Width" Value="38"/>
+            <Setter Property="Height" Value="34"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
+        </Style>
+        <Style Selector="Button.icon.primary">
+            <Setter Property="Background" Value="{DynamicResource AppAccentBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+        </Style>
+        <Style Selector="Button.icon.danger">
+            <Setter Property="Foreground" Value="{DynamicResource AppDangerBrush}"/>
+        </Style>
+        <Style Selector="Button.titlebar">
+            <Setter Property="Width" Value="46"/>
+            <Setter Property="Height" Value="34"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
+        <Style Selector="Button.titlebar:pointerover">
+            <Setter Property="Background" Value="{DynamicResource AppCardMutedBrush}"/>
+        </Style>
+        <Style Selector="ListBox.clean">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+        <Style Selector="ListBox.clean ListBoxItem">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Margin" Value="0"/>
+        </Style>
+        <Style Selector="ListBox.clean ListBoxItem /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="ListBox.clean ListBoxItem:pointerover">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="ListBox.clean ListBoxItem:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="ListBox.clean ListBoxItem:selected">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="ListBox.clean ListBoxItem:selected:pointerover">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="ListBox.clean ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="ListBox.clean ListBoxItem:selected:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="ListBox.clean ListBoxItem:pointerover Border.selectable-card">
+            <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}"/>
+            <Setter Property="BoxShadow" Value="0 0 0 1 #332563EB"/>
+        </Style>
+        <Style Selector="ListBox.clean ListBoxItem:selected Border.selectable-card">
+            <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}"/>
+            <Setter Property="BoxShadow" Value="0 0 0 2 #552563EB"/>
+        </Style>
     </Application.Styles>
 </Application>
