@@ -104,22 +104,8 @@
                 </Border>
 
                 <Grid IsVisible="{Binding HasSelectedMedia}"
-                      RowDefinitions="Auto,*,Auto"
-                      RowSpacing="14">
-                    <Border Classes="card"
-                            Padding="16">
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="{Binding SelectedMediaTitle}"
-                                       Classes="h2"
-                                       TextWrapping="Wrap"/>
-                            <TextBlock Text="{Binding SelectedMediaLocationDisplay}"
-                                       Classes="caption"
-                                       TextWrapping="Wrap"/>
-                        </StackPanel>
-                    </Border>
-
-                    <ScrollViewer Grid.Row="1"
-                                  VerticalScrollBarVisibility="Auto"
+                      RowDefinitions="*">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto"
                                   HorizontalScrollBarVisibility="Disabled">
                         <Grid RowDefinitions="Auto,Auto"
                               RowSpacing="14">
