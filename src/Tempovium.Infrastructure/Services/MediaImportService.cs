@@ -90,7 +90,8 @@ public class MediaImportService : IMediaImportService
             {
                 var fileInfo = new FileInfo(file);
                 var existingBySource = await _mediaRepository.GetByOriginalSourcePathAsync(userId, file);
-                var isPossibleDuplicate = existingBySource?.FileSizeBytes == fileInfo.Length;
+                var isExactSourceDuplicate = IsExactSourceDuplicate(existingBySource, fileInfo);
+                var isPossibleDuplicate = existingBySource is not null;
 
                 if (isPossibleDuplicate)
                 {
@@ -104,11 +105,23 @@ public class MediaImportService : IMediaImportService
                     MediaType = mediaType.Value,
                     Extension = Path.GetExtension(file),
                     FileSizeBytes = fileInfo.Length,
+                    SourceLastWriteTimeUtc = fileInfo.LastWriteTimeUtc,
                     FileHash = null,
+                    ExistingMediaId = existingBySource?.Id,
                     IsDuplicate = false,
                     IsPossibleDuplicate = isPossibleDuplicate,
+                    IsExactSourceDuplicate = isExactSourceDuplicate,
+                    DuplicateReason = isExactSourceDuplicate
+                        ? "Misma ruta, tamaño y fecha de modificación"
+                        : isPossibleDuplicate
+                            ? "Misma ruta de origen"
+                            : string.Empty,
                     IsSelected = !isPossibleDuplicate,
-                    StatusText = isPossibleDuplicate ? "Posible duplicado" : "Listo para revisar"
+                    StatusText = isExactSourceDuplicate
+                        ? "Duplicado exacto"
+                        : isPossibleDuplicate
+                            ? "Posible duplicado"
+                            : "Listo para revisar"
                 });
             }
             catch (Exception ex)
@@ -178,6 +191,13 @@ public class MediaImportService : IMediaImportService
         try
         {
             var fileInfo = new FileInfo(filePath);
+            var existingBySource = await _mediaRepository.GetByOriginalSourcePathAsync(userId, filePath);
+            if (IsExactSourceDuplicate(existingBySource, fileInfo))
+            {
+                result.DuplicateCount++;
+                return;
+            }
+
             var hash = string.IsNullOrWhiteSpace(knownHash)
                 ? await _fileHashService.ComputeHashAsync(filePath)
                 : knownHash;
@@ -213,6 +233,7 @@ public class MediaImportService : IMediaImportService
                     : displayName.Trim(),
                 FilePath = managedPath,
                 OriginalSourcePath = filePath,
+                OriginalSourceLastWriteTimeUtc = fileInfo.LastWriteTimeUtc,
                 FileSizeBytes = fileInfo.Length,
                 FileHash = hash,
                 MediaType = mediaType.Value,
@@ -243,6 +264,13 @@ public class MediaImportService : IMediaImportService
     {
         var extension = Path.GetExtension(sourcePath);
         return Path.Combine(_managedMediaDirectory, $"{mediaId:N}{extension}");
+    }
+
+    private static bool IsExactSourceDuplicate(MediaItem? existing, FileInfo sourceFile)
+    {
+        return existing?.OriginalSourceLastWriteTimeUtc is DateTime sourceLastWriteTimeUtc &&
+               existing.FileSizeBytes == sourceFile.Length &&
+               sourceLastWriteTimeUtc == sourceFile.LastWriteTimeUtc;
     }
 
     private static void TryDeleteFile(string filePath)

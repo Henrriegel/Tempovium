@@ -23,6 +23,8 @@ public class MediaItemConfiguration : IEntityTypeConfiguration<MediaItem>
         builder.Property(x => x.OriginalSourcePath)
             .HasMaxLength(1000);
 
+        builder.Property(x => x.OriginalSourceLastWriteTimeUtc);
+
         builder.Property(x => x.FileSizeBytes)
             .IsRequired();
 

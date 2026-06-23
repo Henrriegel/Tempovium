@@ -29,6 +29,7 @@ public class MediaImportServiceTests
         Assert.True(File.Exists(item.FilePath));
         Assert.True(File.Exists(filePath));
         Assert.Equal(filePath, item.OriginalSourcePath);
+        Assert.Equal(File.GetLastWriteTimeUtc(filePath), item.OriginalSourceLastWriteTimeUtc);
         Assert.Equal(new FileInfo(filePath).Length, item.FileSizeBytes);
     }
 
@@ -164,6 +165,7 @@ public class MediaImportServiceTests
         Assert.Equal(folder.ManagedMediaPath, Path.GetDirectoryName(item.FilePath));
         Assert.True(File.Exists(item.FilePath));
         Assert.Equal(filePath, item.OriginalSourcePath);
+        Assert.Equal(File.GetLastWriteTimeUtc(filePath), item.OriginalSourceLastWriteTimeUtc);
         Assert.Equal(new FileInfo(filePath).Length, item.FileSizeBytes);
     }
 
@@ -221,12 +223,13 @@ public class MediaImportServiceTests
         Assert.True(candidate.IsSelected);
         Assert.False(candidate.IsDuplicate);
         Assert.Null(candidate.FileHash);
+        Assert.Equal(File.GetLastWriteTimeUtc(filePath), candidate.SourceLastWriteTimeUtc);
         Assert.Empty(await repository.GetByUserAsync(userId));
         Assert.Empty(Directory.GetFiles(folder.ManagedMediaPath));
     }
 
     [Fact]
-    public async Task ScanFolderMarksSameSourceAsPossibleDuplicateAndDefaultsItUnselected()
+    public async Task ScanFolderMarksExactSameSourceDuplicateAndDefaultsItUnselected()
     {
         var userId = Guid.NewGuid();
         var repository = new FakeMediaRepository();
@@ -240,9 +243,11 @@ public class MediaImportServiceTests
         var candidate = Assert.Single(preview.Candidates);
         Assert.False(candidate.IsDuplicate);
         Assert.True(candidate.IsPossibleDuplicate);
+        Assert.True(candidate.IsExactSourceDuplicate);
         Assert.False(candidate.IsSelected);
         Assert.True(candidate.CanSelect);
-        Assert.Equal("Posible duplicado", candidate.StatusText);
+        Assert.Equal("Duplicado exacto", candidate.StatusText);
+        Assert.Equal("Misma ruta, tamaño y fecha de modificación", candidate.DuplicateReason);
         Assert.Equal(1, preview.DuplicateCount);
     }
 
@@ -331,6 +336,69 @@ public class MediaImportServiceTests
 
         Assert.Equal(0, result.ImportedCount);
         Assert.Equal(1, result.DuplicateCount);
+        Assert.Single(await repository.GetByUserAsync(userId));
+        Assert.Single(Directory.GetFiles(folder.ManagedMediaPath));
+    }
+
+    [Fact]
+    public async Task ReimportingExactSameSourceSkipsWithoutComputingHash()
+    {
+        var userId = Guid.NewGuid();
+        var repository = new FakeMediaRepository();
+        var hashService = new TextFileHashService();
+        using var folder = TestFolder.Create();
+        folder.WriteFile("lesson.mp4", "same source media");
+        var service = CreateService(repository, folder.ManagedMediaPath, hashService);
+        await service.ImportFolderAsync(userId, folder.Path);
+        var preview = await service.ScanFolderAsync(userId, folder.Path);
+        preview.Candidates[0].IsSelected = true;
+
+        var result = await service.ImportCandidatesAsync(userId, preview.Candidates);
+
+        Assert.Equal(0, result.ImportedCount);
+        Assert.Equal(1, result.DuplicateCount);
+        Assert.Equal(1, hashService.ComputeCount);
+        Assert.Single(await repository.GetByUserAsync(userId));
+        Assert.Single(Directory.GetFiles(folder.ManagedMediaPath));
+    }
+
+    [Fact]
+    public async Task SameSourceChangedLastWriteFallsBackToHashOnConfirm()
+    {
+        var userId = Guid.NewGuid();
+        var repository = new FakeMediaRepository();
+        var hashService = new TextFileHashService();
+        using var folder = TestFolder.Create();
+        var filePath = folder.WriteFile("lesson.mp4", "same content");
+        var service = CreateService(repository, folder.ManagedMediaPath, hashService);
+        await service.ImportFileAsync(userId, filePath);
+        File.SetLastWriteTimeUtc(filePath, File.GetLastWriteTimeUtc(filePath).AddMinutes(5));
+
+        var result = await service.ImportFileAsync(userId, filePath);
+
+        Assert.Equal(0, result.ImportedCount);
+        Assert.Equal(1, result.DuplicateCount);
+        Assert.Equal(2, hashService.ComputeCount);
+        Assert.Single(await repository.GetByUserAsync(userId));
+    }
+
+    [Fact]
+    public async Task DifferentSourcePathWithSameContentSkipsByHashOnConfirm()
+    {
+        var userId = Guid.NewGuid();
+        var repository = new FakeMediaRepository();
+        var hashService = new TextFileHashService();
+        using var folder = TestFolder.Create();
+        var firstPath = folder.WriteFile("first.mp4", "same content");
+        var secondPath = folder.WriteFile("second.mp4", "same content");
+        var service = CreateService(repository, folder.ManagedMediaPath, hashService);
+
+        await service.ImportFileAsync(userId, firstPath);
+        var result = await service.ImportFileAsync(userId, secondPath);
+
+        Assert.Equal(0, result.ImportedCount);
+        Assert.Equal(1, result.DuplicateCount);
+        Assert.Equal(2, hashService.ComputeCount);
         Assert.Single(await repository.GetByUserAsync(userId));
         Assert.Single(Directory.GetFiles(folder.ManagedMediaPath));
     }

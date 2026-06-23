@@ -13,9 +13,13 @@ public class MediaImportCandidate : INotifyPropertyChanged
     public MediaType MediaType { get; set; }
     public string Extension { get; set; } = string.Empty;
     public long FileSizeBytes { get; set; }
+    public DateTime? SourceLastWriteTimeUtc { get; set; }
     public string? FileHash { get; set; }
+    public Guid? ExistingMediaId { get; set; }
     public bool IsDuplicate { get; set; }
     public bool IsPossibleDuplicate { get; set; }
+    public bool IsExactSourceDuplicate { get; set; }
+    public string DuplicateReason { get; set; } = string.Empty;
     public bool IsSelected
     {
         get => _isSelected;
