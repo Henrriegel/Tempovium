@@ -40,11 +40,25 @@ public class MediaImportService : IMediaImportService
 
     public async Task<MediaImportResult> ImportFolderAsync(Guid userId, string folderPath)
     {
-        var result = new MediaImportResult();
+        var preview = await ScanFolderAsync(userId, folderPath);
+        foreach (var candidate in preview.Candidates)
+        {
+            candidate.IsSelected = true;
+        }
+
+        var result = await ImportCandidatesAsync(userId, preview.Candidates);
+        result.TotalFilesScanned = preview.TotalFilesScanned;
+        result.UnsupportedCount += preview.UnsupportedCount;
+        result.ErrorMessages.AddRange(preview.ErrorMessages);
+        return result;
+    }
+
+    public async Task<MediaImportPreviewResult> ScanFolderAsync(Guid userId, string folderPath)
+    {
+        var result = new MediaImportPreviewResult();
 
         if (!Directory.Exists(folderPath))
         {
-            result.MissingCount = 1;
             result.ErrorMessages.Add($"Folder not found: {folderPath}");
             return result;
         }
@@ -64,7 +78,64 @@ public class MediaImportService : IMediaImportService
 
         foreach (var file in files)
         {
-            await ImportExistingFileAsync(userId, file, result);
+            var mediaType = _typeDetector.DetectFromPath(file);
+
+            if (mediaType is null)
+            {
+                result.UnsupportedCount++;
+                continue;
+            }
+
+            try
+            {
+                var fileInfo = new FileInfo(file);
+                var existingBySource = await _mediaRepository.GetByOriginalSourcePathAsync(userId, file);
+                var isPossibleDuplicate = existingBySource?.FileSizeBytes == fileInfo.Length;
+
+                if (isPossibleDuplicate)
+                {
+                    result.DuplicateCount++;
+                }
+
+                result.Candidates.Add(new MediaImportCandidate
+                {
+                    SourcePath = file,
+                    DisplayName = Path.GetFileNameWithoutExtension(file),
+                    MediaType = mediaType.Value,
+                    Extension = Path.GetExtension(file),
+                    FileSizeBytes = fileInfo.Length,
+                    FileHash = null,
+                    IsDuplicate = false,
+                    IsPossibleDuplicate = isPossibleDuplicate,
+                    IsSelected = !isPossibleDuplicate,
+                    StatusText = isPossibleDuplicate ? "Posible duplicado" : "Listo para revisar"
+                });
+            }
+            catch (Exception ex)
+            {
+                result.ErrorMessages.Add($"{Path.GetFileName(file)}: {ex.Message}");
+            }
+        }
+
+        return result;
+    }
+
+    public async Task<MediaImportResult> ImportCandidatesAsync(Guid userId, IEnumerable<MediaImportCandidate> candidates)
+    {
+        var candidateList = candidates.ToList();
+        var result = new MediaImportResult
+        {
+            TotalFilesScanned = candidateList.Count
+        };
+
+        foreach (var candidate in candidateList)
+        {
+            if (!candidate.IsSelected)
+            {
+                continue;
+            }
+
+            await ImportExistingFileAsync(userId, candidate.SourcePath, result, candidate.DisplayName, candidate.FileHash);
         }
 
         return result;
@@ -89,7 +160,12 @@ public class MediaImportService : IMediaImportService
         return result;
     }
 
-    private async Task ImportExistingFileAsync(Guid userId, string filePath, MediaImportResult result)
+    private async Task ImportExistingFileAsync(
+        Guid userId,
+        string filePath,
+        MediaImportResult result,
+        string? displayName = null,
+        string? knownHash = null)
     {
         var mediaType = _typeDetector.DetectFromPath(filePath);
 
@@ -102,7 +178,9 @@ public class MediaImportService : IMediaImportService
         try
         {
             var fileInfo = new FileInfo(filePath);
-            var hash = await _fileHashService.ComputeHashAsync(filePath);
+            var hash = string.IsNullOrWhiteSpace(knownHash)
+                ? await _fileHashService.ComputeHashAsync(filePath)
+                : knownHash;
 
             var existing = await _mediaRepository.GetByHashAsync(userId, hash);
 
@@ -130,7 +208,9 @@ public class MediaImportService : IMediaImportService
             {
                 Id = mediaId,
                 UserId = userId,
-                Title = Path.GetFileNameWithoutExtension(filePath),
+                Title = string.IsNullOrWhiteSpace(displayName)
+                    ? Path.GetFileNameWithoutExtension(filePath)
+                    : displayName.Trim(),
                 FilePath = managedPath,
                 OriginalSourcePath = filePath,
                 FileSizeBytes = fileInfo.Length,

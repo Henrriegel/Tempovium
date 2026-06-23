@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Tempovium.ViewModels"
              xmlns:entities="using:Tempovium.Core.Entities"
+             xmlns:models="using:Tempovium.Core.Models"
              xmlns:controls="using:Tempovium.Controls"
              xmlns:converters="using:Tempovium.Converters"
              x:Class="Tempovium.Views.LibraryView"
@@ -46,7 +47,7 @@
         </Grid>
 
         <Grid Grid.Row="1"
-              ColumnDefinitions="360,*"
+              ColumnDefinitions="280,*"
               ColumnSpacing="16">
             <Border Classes="panel"
                     Padding="14">
@@ -69,6 +70,7 @@
                                               ColumnSpacing="10">
                                             <TextBlock Text="{Binding Title}"
                                                        FontWeight="SemiBold"
+                                                       TextTrimming="CharacterEllipsis"
                                                        TextWrapping="Wrap"
                                                        Foreground="{DynamicResource AppTextPrimaryBrush}"/>
                                             <TextBlock Grid.Column="1"
@@ -116,5 +118,151 @@
                 </Grid>
             </Grid>
         </Grid>
+
+        <Border Grid.RowSpan="2"
+                IsVisible="{Binding IsImportReviewOpen}"
+                Background="{DynamicResource AppOverlayBrush}">
+            <Border Classes="panel"
+                    MaxWidth="980"
+                    MaxHeight="680"
+                    Margin="24"
+                    Padding="22"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch">
+                <Grid RowDefinitions="Auto,Auto,*,Auto"
+                      RowSpacing="16">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Spacing="3">
+                            <TextBlock Text="Revisar importación"
+                                       Classes="h2"/>
+                            <TextBlock Text="{Binding ImportReviewSummary}"
+                                       Classes="caption"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <Button Grid.Column="1"
+                                Content="Cancelar"
+                                Classes="ghost"
+                                ToolTip.Tip="Cancelar"
+                                AutomationProperties.Name="Cancelar revisión"
+                                Command="{Binding CancelImportReviewCommand}"/>
+                    </Grid>
+
+                    <TextBlock Grid.Row="1"
+                               Text="Selecciona los archivos que quieres importar y ajusta el nombre visible antes de confirmar."
+                               Foreground="{DynamicResource AppTextSecondaryBrush}"
+                               TextWrapping="Wrap"/>
+
+                    <Grid Grid.Row="2"
+                          RowDefinitions="Auto,*"
+                          RowSpacing="8"
+                          IsVisible="{Binding HasImportReviewCandidates}">
+                        <Grid ColumnDefinitions="34,*,72,92,130"
+                              ColumnSpacing="12"
+                              Margin="14,0,14,0">
+                            <TextBlock Grid.Column="1" Text="Nombre" Classes="caption"/>
+                            <TextBlock Grid.Column="2" Text="Tipo" Classes="caption"/>
+                            <TextBlock Grid.Column="3" Text="Tamaño" Classes="caption"/>
+                            <TextBlock Grid.Column="4" Text="Estado" Classes="caption"/>
+                        </Grid>
+
+                        <ScrollViewer Grid.Row="1"
+                                      VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled">
+                            <ItemsControl ItemsSource="{Binding ImportReviewCandidates}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="models:MediaImportCandidate">
+                                        <Border Classes="card"
+                                                Margin="0,0,0,10"
+                                                Padding="12">
+                                            <Grid ColumnDefinitions="34,*,72,92,130"
+                                                  ColumnSpacing="12">
+                                                <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                          IsEnabled="{Binding CanSelect}"
+                                                          VerticalAlignment="Top"/>
+
+                                                <StackPanel Grid.Column="1"
+                                                            Spacing="6">
+                                                    <TextBox Text="{Binding DisplayName, Mode=TwoWay}"
+                                                             Watermark="Nombre visible"/>
+                                                    <TextBlock Text="{Binding SourcePath}"
+                                                               Classes="caption"
+                                                               TextWrapping="Wrap"/>
+                                                </StackPanel>
+
+                                                <TextBlock Grid.Column="2"
+                                                           Text="{Binding MediaType}"
+                                                           Classes="caption"
+                                                           VerticalAlignment="Top"
+                                                           Margin="0,8,0,0"/>
+                                                <TextBlock Grid.Column="3"
+                                                           Text="{Binding FileSizeText}"
+                                                           Classes="caption"
+                                                           VerticalAlignment="Top"
+                                                           Margin="0,8,0,0"/>
+                                                <TextBlock Grid.Column="4"
+                                                           Text="{Binding StatusText}"
+                                                           Classes="caption"
+                                                           TextWrapping="Wrap"
+                                                           VerticalAlignment="Top"
+                                                           Margin="0,8,0,0"/>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Grid>
+
+                    <Border Grid.Row="2"
+                            Classes="card"
+                            Background="{DynamicResource AppCardMutedBrush}"
+                            IsVisible="{Binding HasNoImportReviewCandidates}">
+                        <TextBlock Text="No se encontraron medios compatibles para importar."
+                                   Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                   TextWrapping="Wrap"/>
+                    </Border>
+
+                    <Grid Grid.Row="3"
+                          RowDefinitions="Auto,Auto"
+                          RowSpacing="10">
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="12">
+                        <TextBlock Text="{Binding ImportReviewSelectionText}"
+                                   Classes="caption"
+                                   VerticalAlignment="Center"/>
+                        <Button Content="Seleccionar todos"
+                                Classes="ghost"
+                                ToolTip.Tip="Seleccionar todos"
+                                AutomationProperties.Name="Seleccionar todos"
+                                Command="{Binding SelectAllImportReviewCommand}"/>
+                        <Button
+                                Content="Limpiar selección"
+                                Classes="ghost"
+                                ToolTip.Tip="Limpiar selección"
+                                AutomationProperties.Name="Limpiar selección"
+                                Command="{Binding ClearImportReviewSelectionCommand}"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="1"
+                                    Orientation="Horizontal"
+                                    Spacing="12"
+                                    HorizontalAlignment="Right">
+                        <Button Content="Cancelar"
+                                Classes="ghost"
+                                ToolTip.Tip="Cancelar"
+                                AutomationProperties.Name="Cancelar importación"
+                                Command="{Binding CancelImportReviewCommand}"/>
+                        <Button Content="Importar seleccionados"
+                                Classes="primary"
+                                ToolTip.Tip="Confirmar importación"
+                                AutomationProperties.Name="Confirmar importación"
+                                IsEnabled="{Binding CanConfirmImport}"
+                                Command="{Binding ConfirmImportCommand}"/>
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Border>
     </Grid>
 </UserControl>

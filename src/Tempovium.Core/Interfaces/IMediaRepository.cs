@@ -9,6 +9,8 @@ public interface IMediaRepository
     Task<List<MediaItem>> GetByUserAsync(Guid user);
     
     Task<MediaItem?> GetByHashAsync(Guid userId, string hash);
+
+    Task<MediaItem?> GetByOriginalSourcePathAsync(Guid userId, string originalSourcePath);
     
     Task CreateAsync(MediaItem media);
     

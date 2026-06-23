@@ -34,6 +34,12 @@ public class MediaRepository : IMediaRepository
             .FirstOrDefaultAsync(x => x.UserId == userId && x.FileHash == hash);
     }
 
+    public async Task<MediaItem?> GetByOriginalSourcePathAsync(Guid userId, string originalSourcePath)
+    {
+        return await _db.MediaItems
+            .FirstOrDefaultAsync(x => x.UserId == userId && x.OriginalSourcePath == originalSourcePath);
+    }
+
     public async Task CreateAsync(MediaItem media)
     {
         _db.MediaItems.Add(media);

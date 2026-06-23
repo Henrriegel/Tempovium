@@ -1,6 +1,9 @@
 using System;
+using System.Collections.ObjectModel;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using Avalonia;
@@ -24,9 +27,14 @@ public class LibraryViewModel : ViewModelBase
     private readonly MainWindowViewModel _shellViewModel;
 
     private List<MediaItem> _mediaItems = new();
+    private ObservableCollection<MediaImportCandidate> _importReviewCandidates = [];
     private string _statusMessage = string.Empty;
+    private string _importReviewSummary = string.Empty;
+    private string _importOverlayTitle = "Importando medios";
+    private string _importOverlayMessage = "La biblioteca se actualizará al terminar.";
     private MediaItem? _selectedMedia;
     private bool _isImporting;
+    private bool _isImportReviewOpen;
 
     public LibraryViewModel(
         IMediaRepository mediaRepository,
@@ -45,6 +53,10 @@ public class LibraryViewModel : ViewModelBase
 
         ImportFolderCommand = new SimpleCommand(ExecuteImportFolder);
         ImportFileCommand = new SimpleCommand(ExecuteImportFile);
+        ConfirmImportCommand = new SimpleCommand(ExecuteConfirmImport);
+        CancelImportReviewCommand = new SimpleCommand(CancelImportReview);
+        SelectAllImportReviewCommand = new SimpleCommand(SelectAllImportReviewCandidates);
+        ClearImportReviewSelectionCommand = new SimpleCommand(ClearImportReviewSelection);
         _ = LoadLibraryAsync();
     }
 
@@ -61,6 +73,45 @@ public class LibraryViewModel : ViewModelBase
         get => _statusMessage;
         set => SetProperty(ref _statusMessage, value);
     }
+
+    public ObservableCollection<MediaImportCandidate> ImportReviewCandidates
+    {
+        get => _importReviewCandidates;
+        set
+        {
+            var oldCandidates = _importReviewCandidates;
+            if (SetProperty(ref _importReviewCandidates, value))
+            {
+                UnsubscribeImportReviewCandidates(oldCandidates);
+                SubscribeImportReviewCandidates(_importReviewCandidates);
+                RefreshImportReviewSelection();
+            }
+        }
+    }
+
+    public string ImportReviewSummary
+    {
+        get => _importReviewSummary;
+        set => SetProperty(ref _importReviewSummary, value);
+    }
+
+    public bool IsImportReviewOpen
+    {
+        get => _isImportReviewOpen;
+        set
+        {
+            if (SetProperty(ref _isImportReviewOpen, value))
+            {
+                OnPropertyChanged(nameof(CanImport));
+            }
+        }
+    }
+
+    public bool HasImportReviewCandidates => ImportReviewCandidates.Count > 0;
+    public bool HasNoImportReviewCandidates => !HasImportReviewCandidates;
+    public int SelectedImportReviewCount => ImportReviewCandidates.Count(candidate => candidate.IsSelected);
+    public bool CanConfirmImport => SelectedImportReviewCount > 0;
+    public string ImportReviewSelectionText => $"Seleccionados: {SelectedImportReviewCount}";
 
     public MediaItem? SelectedMedia
     {
@@ -99,15 +150,52 @@ public class LibraryViewModel : ViewModelBase
             if (SetProperty(ref _isImporting, value))
             {
                 OnPropertyChanged(nameof(CanImport));
-                _shellViewModel.SetImporting(value);
+                _shellViewModel.SetImporting(value, _importOverlayTitle, _importOverlayMessage);
             }
         }
     }
 
-    public bool CanImport => !IsImporting;
+    public bool CanImport => !IsImporting && !IsImportReviewOpen;
 
     public ICommand ImportFolderCommand { get; }
     public ICommand ImportFileCommand { get; }
+    public ICommand ConfirmImportCommand { get; }
+    public ICommand CancelImportReviewCommand { get; }
+    public ICommand SelectAllImportReviewCommand { get; }
+    public ICommand ClearImportReviewSelectionCommand { get; }
+
+    public void RefreshImportReviewSelection()
+    {
+        OnPropertyChanged(nameof(HasImportReviewCandidates));
+        OnPropertyChanged(nameof(HasNoImportReviewCandidates));
+        OnPropertyChanged(nameof(SelectedImportReviewCount));
+        OnPropertyChanged(nameof(CanConfirmImport));
+        OnPropertyChanged(nameof(ImportReviewSelectionText));
+    }
+
+    private void SubscribeImportReviewCandidates(IEnumerable<MediaImportCandidate> candidates)
+    {
+        foreach (var candidate in candidates)
+        {
+            candidate.PropertyChanged += OnImportReviewCandidateChanged;
+        }
+    }
+
+    private void UnsubscribeImportReviewCandidates(IEnumerable<MediaImportCandidate> candidates)
+    {
+        foreach (var candidate in candidates)
+        {
+            candidate.PropertyChanged -= OnImportReviewCandidateChanged;
+        }
+    }
+
+    private void OnImportReviewCandidateChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MediaImportCandidate.IsSelected))
+        {
+            RefreshImportReviewSelection();
+        }
+    }
 
     private async Task LoadLibraryAsync()
     {
@@ -160,12 +248,14 @@ public class LibraryViewModel : ViewModelBase
         }
 
         var user = _userSessionService.CurrentUser!;
+        SetImportOverlay("Analizando carpeta", "Preparando la revisión de archivos.");
         IsImporting = true;
         try
         {
-            var importResult = await _mediaImportService.ImportFolderAsync(user.Id, folderPath);
-            await LoadLibraryAsync();
-            StatusMessage = FormatImportSummary(importResult);
+            var preview = await _mediaImportService.ScanFolderAsync(user.Id, folderPath);
+            ImportReviewCandidates = new ObservableCollection<MediaImportCandidate>(preview.Candidates);
+            ImportReviewSummary = FormatPreviewSummary(preview);
+            IsImportReviewOpen = true;
         }
         catch (Exception ex)
         {
@@ -218,6 +308,7 @@ public class LibraryViewModel : ViewModelBase
         }
 
         var user = _userSessionService.CurrentUser!;
+        SetImportOverlay("Importando medios", "La biblioteca se actualizará al terminar.");
         IsImporting = true;
         try
         {
@@ -235,6 +326,81 @@ public class LibraryViewModel : ViewModelBase
         }
     }
 
+    private async void ExecuteConfirmImport()
+    {
+        if (IsImporting)
+        {
+            return;
+        }
+
+        if (!_userSessionService.IsLoggedIn)
+        {
+            StatusMessage = "No hay un usuario con sesión activa.";
+            return;
+        }
+
+        var user = _userSessionService.CurrentUser!;
+        if (!CanConfirmImport)
+        {
+            StatusMessage = "Selecciona al menos un archivo para importar.";
+            return;
+        }
+
+        SetImportOverlay("Importando medios", "La biblioteca se actualizará al terminar.");
+        IsImporting = true;
+        try
+        {
+            var selectedCandidates = ImportReviewCandidates
+                .Where(candidate => candidate.IsSelected)
+                .ToList();
+            var importResult = await _mediaImportService.ImportCandidatesAsync(user.Id, selectedCandidates);
+            IsImportReviewOpen = false;
+            await LoadLibraryAsync();
+            StatusMessage = FormatImportSummary(importResult);
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error durante la importación: {ex.Message}";
+        }
+        finally
+        {
+            IsImporting = false;
+        }
+    }
+
+    private void CancelImportReview()
+    {
+        IsImportReviewOpen = false;
+        ImportReviewCandidates = [];
+        ImportReviewSummary = string.Empty;
+    }
+
+    private void SelectAllImportReviewCandidates()
+    {
+        foreach (var candidate in ImportReviewCandidates.Where(candidate => candidate.CanSelect))
+        {
+            candidate.IsSelected = true;
+        }
+
+        RefreshImportReviewSelection();
+    }
+
+    private void ClearImportReviewSelection()
+    {
+        foreach (var candidate in ImportReviewCandidates)
+        {
+            candidate.IsSelected = false;
+        }
+
+        RefreshImportReviewSelection();
+    }
+
+    private void SetImportOverlay(string title, string message)
+    {
+        _importOverlayTitle = title;
+        _importOverlayMessage = message;
+    }
+
     private static TopLevel? GetTopLevel()
     {
         return TopLevel.GetTopLevel(
@@ -248,6 +414,15 @@ public class LibraryViewModel : ViewModelBase
         return $"Importación completada. Importados: {result.ImportedCount}. " +
                $"Duplicados omitidos: {result.DuplicateCount}. " +
                $"No compatibles omitidos: {result.UnsupportedCount}. " +
+               $"Errores: {result.ErrorCount}.";
+    }
+
+    private static string FormatPreviewSummary(MediaImportPreviewResult result)
+    {
+        return $"Escaneados: {result.TotalFilesScanned}. " +
+               $"Compatibles: {result.SupportedCount}. " +
+               $"Duplicados: {result.DuplicateCount}. " +
+               $"No compatibles: {result.UnsupportedCount}. " +
                $"Errores: {result.ErrorCount}.";
     }
 

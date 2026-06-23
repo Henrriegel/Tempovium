@@ -24,6 +24,8 @@ public class MainWindowViewModel : ViewModelBase
     private bool _isImporting;
     private int _themeSelectedIndex;
     private Bitmap? _currentUserAvatarImage;
+    private string _importOverlayTitle = "Importando medios";
+    private string _importOverlayMessage = "La biblioteca se actualizará al terminar.";
     private string _themeStatus = "Tema: sistema";
 
     public MainWindowViewModel(
@@ -87,6 +89,18 @@ public class MainWindowViewModel : ViewModelBase
         private set => SetProperty(ref _isImporting, value);
     }
 
+    public string ImportOverlayTitle
+    {
+        get => _importOverlayTitle;
+        private set => SetProperty(ref _importOverlayTitle, value);
+    }
+
+    public string ImportOverlayMessage
+    {
+        get => _importOverlayMessage;
+        private set => SetProperty(ref _importOverlayMessage, value);
+    }
+
     public string ThemeStatus
     {
         get => _themeStatus;
@@ -115,8 +129,18 @@ public class MainWindowViewModel : ViewModelBase
     public ICommand CloseSettingsCommand { get; }
     public ICommand ChangeAvatarCommand { get; }
 
-    public void SetImporting(bool isImporting)
+    public void SetImporting(bool isImporting, string? title = null, string? message = null)
     {
+        if (!string.IsNullOrWhiteSpace(title))
+        {
+            ImportOverlayTitle = title;
+        }
+
+        if (!string.IsNullOrWhiteSpace(message))
+        {
+            ImportOverlayMessage = message;
+        }
+
         IsImporting = isImporting;
     }
 

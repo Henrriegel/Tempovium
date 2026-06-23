@@ -7,12 +7,14 @@
              x:Class="Tempovium.Views.LoginView"
              x:DataType="vm:LoginViewModel">
 
-    <Grid Background="{DynamicResource AppBackgroundBrush}"
-          RowDefinitions="*,Auto,*"
-          ColumnDefinitions="*,520,*">
-        <StackPanel Grid.Row="1"
-                    Grid.Column="1"
-                    Spacing="14">
+    <Grid Background="{DynamicResource AppBackgroundBrush}">
+        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Spacing="14"
+                    MaxWidth="520"
+                    Margin="24"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
             <Border Classes="card"
                     Padding="28"
                     IsVisible="{Binding IsProfileListVisible}">
@@ -166,5 +168,6 @@
                 </StackPanel>
             </Border>
         </StackPanel>
+        </ScrollViewer>
     </Grid>
 </UserControl>

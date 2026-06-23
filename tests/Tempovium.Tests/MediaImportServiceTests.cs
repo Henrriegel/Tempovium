@@ -1,5 +1,6 @@
 using Tempovium.Core.Entities;
 using Tempovium.Core.Interfaces;
+using Tempovium.Core.Models;
 using Tempovium.Core.Services;
 using Tempovium.Infrastructure.Services;
 
@@ -203,19 +204,156 @@ public class MediaImportServiceTests
         Assert.Empty(Directory.GetFiles(folder.ManagedMediaPath));
     }
 
-    private static MediaImportService CreateService(FakeMediaRepository repository, string managedMediaDirectory)
+    [Fact]
+    public async Task ScanFolderReturnsSupportedCandidatesWithoutImporting()
+    {
+        var repository = new FakeMediaRepository();
+        using var folder = TestFolder.Create();
+        var filePath = folder.WriteFile("lesson.mp4", "preview media");
+        var service = CreateService(repository, folder.ManagedMediaPath);
+        var userId = Guid.NewGuid();
+
+        var preview = await service.ScanFolderAsync(userId, folder.Path);
+
+        var candidate = Assert.Single(preview.Candidates);
+        Assert.Equal(filePath, candidate.SourcePath);
+        Assert.Equal("lesson", candidate.DisplayName);
+        Assert.True(candidate.IsSelected);
+        Assert.False(candidate.IsDuplicate);
+        Assert.Null(candidate.FileHash);
+        Assert.Empty(await repository.GetByUserAsync(userId));
+        Assert.Empty(Directory.GetFiles(folder.ManagedMediaPath));
+    }
+
+    [Fact]
+    public async Task ScanFolderMarksSameSourceAsPossibleDuplicateAndDefaultsItUnselected()
+    {
+        var userId = Guid.NewGuid();
+        var repository = new FakeMediaRepository();
+        using var folder = TestFolder.Create();
+        folder.WriteFile("lesson.mp4", "duplicate media");
+        var service = CreateService(repository, folder.ManagedMediaPath);
+        await service.ImportFolderAsync(userId, folder.Path);
+
+        var preview = await service.ScanFolderAsync(userId, folder.Path);
+
+        var candidate = Assert.Single(preview.Candidates);
+        Assert.False(candidate.IsDuplicate);
+        Assert.True(candidate.IsPossibleDuplicate);
+        Assert.False(candidate.IsSelected);
+        Assert.True(candidate.CanSelect);
+        Assert.Equal("Posible duplicado", candidate.StatusText);
+        Assert.Equal(1, preview.DuplicateCount);
+    }
+
+    [Fact]
+    public async Task ScanFolderDoesNotComputeFullHashes()
+    {
+        var repository = new FakeMediaRepository();
+        var hashService = new TextFileHashService();
+        using var folder = TestFolder.Create();
+        folder.WriteFile("lesson.mp4", "preview media");
+        var service = CreateService(repository, folder.ManagedMediaPath, hashService);
+
+        var preview = await service.ScanFolderAsync(Guid.NewGuid(), folder.Path);
+
+        Assert.Single(preview.Candidates);
+        Assert.Equal(0, hashService.ComputeCount);
+    }
+
+    [Fact]
+    public async Task ScanFolderCountsUnsupportedFiles()
+    {
+        var repository = new FakeMediaRepository();
+        using var folder = TestFolder.Create();
+        folder.WriteFile("lesson.mp4", "preview media");
+        folder.WriteFile("notes.txt", "not media");
+        var service = CreateService(repository, folder.ManagedMediaPath);
+
+        var preview = await service.ScanFolderAsync(Guid.NewGuid(), folder.Path);
+
+        Assert.Equal(2, preview.TotalFilesScanned);
+        Assert.Equal(1, preview.SupportedCount);
+        Assert.Equal(1, preview.UnsupportedCount);
+    }
+
+    [Fact]
+    public async Task ImportCandidatesImportsOnlySelectedFiles()
+    {
+        var userId = Guid.NewGuid();
+        var repository = new FakeMediaRepository();
+        var hashService = new TextFileHashService();
+        using var folder = TestFolder.Create();
+        folder.WriteFile("first.mp4", "first media");
+        var secondPath = folder.WriteFile("second.mp4", "second media");
+        var service = CreateService(repository, folder.ManagedMediaPath, hashService);
+        var preview = await service.ScanFolderAsync(userId, folder.Path);
+        preview.Candidates.Single(candidate => candidate.SourcePath == secondPath).IsSelected = false;
+
+        var result = await service.ImportCandidatesAsync(userId, preview.Candidates);
+
+        Assert.Equal(1, result.ImportedCount);
+        Assert.Equal(1, hashService.ComputeCount);
+        Assert.Single(await repository.GetByUserAsync(userId));
+        Assert.Single(Directory.GetFiles(folder.ManagedMediaPath));
+    }
+
+    [Fact]
+    public async Task ImportCandidatesUsesEditedDisplayName()
+    {
+        var userId = Guid.NewGuid();
+        var repository = new FakeMediaRepository();
+        using var folder = TestFolder.Create();
+        folder.WriteFile("lesson.mp4", "named media");
+        var service = CreateService(repository, folder.ManagedMediaPath);
+        var preview = await service.ScanFolderAsync(userId, folder.Path);
+        preview.Candidates[0].DisplayName = "Clase editada";
+
+        var result = await service.ImportCandidatesAsync(userId, preview.Candidates);
+
+        var item = Assert.Single(result.ImportedItems);
+        Assert.Equal("Clase editada", item.Title);
+    }
+
+    [Fact]
+    public async Task ImportCandidatesSkipsRealDuplicatesOnConfirm()
+    {
+        var userId = Guid.NewGuid();
+        var repository = new FakeMediaRepository();
+        using var folder = TestFolder.Create();
+        folder.WriteFile("lesson.mp4", "duplicate on confirm");
+        var service = CreateService(repository, folder.ManagedMediaPath);
+        await service.ImportFolderAsync(userId, folder.Path);
+        var preview = await service.ScanFolderAsync(userId, folder.Path);
+        preview.Candidates[0].IsSelected = true;
+
+        var result = await service.ImportCandidatesAsync(userId, preview.Candidates);
+
+        Assert.Equal(0, result.ImportedCount);
+        Assert.Equal(1, result.DuplicateCount);
+        Assert.Single(await repository.GetByUserAsync(userId));
+        Assert.Single(Directory.GetFiles(folder.ManagedMediaPath));
+    }
+
+    private static MediaImportService CreateService(
+        FakeMediaRepository repository,
+        string managedMediaDirectory,
+        IFileHashService? hashService = null)
     {
         return new MediaImportService(
             repository,
-            new TextFileHashService(),
+            hashService ?? new TextFileHashService(),
             new MediaFileTypeDetector(),
             managedMediaDirectory);
     }
 
     private sealed class TextFileHashService : IFileHashService
     {
+        public int ComputeCount { get; private set; }
+
         public async Task<string> ComputeHashAsync(string filePath)
         {
+            ComputeCount++;
             return await File.ReadAllTextAsync(filePath);
         }
     }
@@ -239,6 +377,13 @@ public class MediaImportServiceTests
         public Task<MediaItem?> GetByHashAsync(Guid userId, string hash)
         {
             return Task.FromResult(_items.FirstOrDefault(item => item.UserId == userId && item.FileHash == hash));
+        }
+
+        public Task<MediaItem?> GetByOriginalSourcePathAsync(Guid userId, string originalSourcePath)
+        {
+            return Task.FromResult(_items.FirstOrDefault(item =>
+                item.UserId == userId &&
+                item.OriginalSourcePath == originalSourcePath));
         }
 
         public Task CreateAsync(MediaItem media)

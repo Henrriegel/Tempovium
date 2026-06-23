@@ -8,8 +8,8 @@
         Icon="/Assets/Branding/tempovium.ico"
         Width="1200"
         Height="760"
-        MinWidth="1040"
-        MinHeight="680"
+        MinWidth="860"
+        MinHeight="600"
         SystemDecorations="None"
         Background="{DynamicResource AppBackgroundBrush}">
 
@@ -105,6 +105,8 @@
                     </Border>
                     <TextBlock Text="{Binding CurrentUsername, StringFormat='Perfil: {0}'}"
                                VerticalAlignment="Center"
+                               MaxWidth="220"
+                               TextTrimming="CharacterEllipsis"
                                Foreground="{DynamicResource AppTextSecondaryBrush}"/>
                 </StackPanel>
 
@@ -131,13 +133,17 @@
         <Border Grid.RowSpan="3"
                 IsVisible="{Binding IsSettingsOpen}"
                 Background="{DynamicResource AppOverlayBrush}">
-            <Grid ColumnDefinitions="*,420">
+            <Grid ColumnDefinitions="*,Auto">
                 <Border Grid.Column="1"
                         Classes="panel"
+                        Width="420"
+                        MaxWidth="420"
                         Margin="0"
                         Padding="24"
                         CornerRadius="8,0,0,8">
-                    <Grid RowDefinitions="Auto,Auto,Auto,Auto,*"
+                    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled">
+                    <Grid RowDefinitions="Auto,Auto,Auto,Auto"
                           RowSpacing="18">
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel>
@@ -234,6 +240,7 @@
                             </StackPanel>
                         </Border>
                     </Grid>
+                    </ScrollViewer>
                 </Border>
             </Grid>
         </Border>
@@ -248,10 +255,10 @@
                 <StackPanel Spacing="14">
                     <ProgressBar IsIndeterminate="True"
                                  Height="6"/>
-                    <TextBlock Text="Importando medios"
+                    <TextBlock Text="{Binding ImportOverlayTitle}"
                                Classes="h2"
                                HorizontalAlignment="Center"/>
-                    <TextBlock Text="La biblioteca se actualizará al terminar."
+                    <TextBlock Text="{Binding ImportOverlayMessage}"
                                Classes="caption"
                                HorizontalAlignment="Center"/>
                 </StackPanel>
